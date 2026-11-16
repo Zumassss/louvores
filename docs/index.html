@@ -5,60 +5,68 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Louvores</title>
 <meta name="description" content="Cifras e partituras de louvores — funciona sem internet.">
-<meta name="theme-color" content="#8f1d22">
+<meta name="theme-color" content="#b3232a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Louvores">
+<meta name="format-detection" content="telephone=no">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="fonts/nunito-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="hero">
   <div class="hero-inner">
     <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3v26M8 11h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
-      <div>
+      <img class="logo" src="img/icm-white.svg" alt="Igreja Cristã Maranata" width="118" height="27">
+      <div class="brand-text">
         <h1>Louvores</h1>
-        <p class="sub">Cifras e partituras para o louvor</p>
+        <p class="sub">Cifras e partituras</p>
       </div>
     </div>
     <button id="offlineBtn" class="pill" type="button" aria-live="polite"><span class="dot"></span><span id="offlineTxt">Preparando…</span></button>
   </div>
 </header>
 
-<div class="searchbar">
+<div class="searchbar" id="searchbar">
   <div class="search-wrap">
-    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    <input id="q" type="search" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Número, título ou trecho da letra">
-    <button id="clear" class="clear" type="button" aria-label="Limpar" hidden>×</button>
+    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Número, título ou trecho da letra" aria-label="Buscar louvor">
+    <button id="clear" class="clear" type="button" aria-label="Limpar busca" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
   </div>
-  <div class="chips" id="chips" role="tablist"></div>
+  <div class="chips" id="chips" role="tablist" aria-label="Filtros"></div>
 </div>
 
 <main>
   <div id="meta" class="meta"></div>
   <ul id="list" class="list"></ul>
-  <p id="empty" class="empty" hidden>Nenhum louvor encontrado.<br><span>Tente outra palavra ou um trecho diferente da letra.</span></p>
+  <div id="empty" class="empty" hidden>
+    <img src="img/icm-red.svg" alt="" width="120" height="28">
+    <p>Nenhum louvor encontrado.</p>
+    <span>Tente outra palavra, o número ou um trecho diferente da letra.</span>
+  </div>
+  <footer class="foot"><img src="img/icm-red.svg" alt="" width="84" height="20"><span id="ver"></span></footer>
 </main>
 
-<section id="viewer" class="viewer" hidden aria-modal="true" role="dialog">
+<section id="viewer" class="viewer" hidden aria-modal="true" role="dialog" aria-labelledby="vName">
   <div class="vbar">
     <button id="vBack" class="vbtn" type="button" aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="vtitle"><span id="vNum" class="vnum"></span><span id="vName"></span></div>
-    <button id="vStar" class="vbtn" type="button" aria-label="Favoritar"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
+    <button id="vStar" class="vbtn" type="button" aria-label="Favoritar"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></button>
   </div>
   <div class="vtools">
-    <div class="seg" id="vDocs"></div>
+    <div class="seg" id="vDocs" role="tablist" aria-label="Documentos"></div>
     <div class="zoom">
       <button id="zOut" class="zbtn" type="button" aria-label="Diminuir">−</button>
-      <span id="zVal">100%</span>
+      <button id="zVal" class="zval" type="button" aria-label="Ajustar à largura">100%</button>
       <button id="zIn" class="zbtn" type="button" aria-label="Aumentar">+</button>
     </div>
   </div>
   <div id="pages" class="pages"></div>
+  <div id="pageInd" class="page-ind" hidden></div>
 </section>
 
 <script src="data.js"></script>
