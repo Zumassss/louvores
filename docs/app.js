@@ -3,6 +3,8 @@
   var DATA = window.LOUVORES || [];
   var CADS = window.CADERNOS || [];
   var FILES = window.ARQUIVOS || {};
+  var LETRAS = window.LETRAS || [];
+  var RECORTES = window.RECORTES || {};
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- Utilidades ----------
@@ -30,9 +32,10 @@
     d.key = d.d[0][0] + ":" + (d.d[0][2] || 0);
     prep(d, d.t + " " + (d.a || []).join(" "), d.x);
     d.nt = norm(d.t); d.ct = d.nt.replace(/ /g, ""); d.tw = d.nt.split(" ").filter(Boolean);
-    var m = /^(cia\s*)?([a-z]?)0*(\d+)$/i.exec((d.n || "").replace(/\s+/g, " ").trim());
-    d.numDigits = m ? m[3] : "";
-    d.numPre = m ? ((m[1] ? "cia" : "") + m[2].toLowerCase()) : "";
+    d.nums = [d.n].concat(d.m || []).map(function (n) {
+      var m = /^(cia\s*)?([a-z]?)0*(\d+)$/i.exec((n || "").replace(/\s+/g, " ").trim());
+      return m ? [m[3], (m[1] ? "cia" : "") + m[2].toLowerCase()] : null;
+    }).filter(Boolean);
     d.hasCifra = d.d.some(function (x) { return /^(Cifra|Harmonia)/.test(x[1]); });
     d.cs = d.c + (d.g ? " · " + d.g : "");
   });
@@ -96,10 +99,13 @@
   function score(d, q, toks, cq) {
     var s = 0, why = "t";
     var nm = /^(cia\s*|c\s*)?([a-z]?)\s*0*(\d+)$/.exec(q);
-    if (nm && d.numDigits) {
+    if (nm) {
       var pre = (nm[1] ? "cia" : "") + (nm[2] || "");
-      if (d.numDigits === nm[3] && (!pre || pre === d.numPre)) s = Math.max(s, !pre && d.numPre ? 950 : 1000);
-      else if (d.numDigits.indexOf(nm[3]) === 0 && (!pre || pre === d.numPre)) s = Math.max(s, 300);
+      d.nums.forEach(function (x, k) {
+        var dig = x[0], dpre = x[1], bonus = k === 0 ? 0 : -20;
+        if (dig === nm[3] && (!pre || pre === dpre)) s = Math.max(s, (!pre && dpre ? 950 : 1000) + bonus);
+        else if (dig.indexOf(nm[3]) === 0 && (!pre || pre === dpre)) s = Math.max(s, 300);
+      });
     }
     if (!toks.length) return { s: s, why: why };
     if (d.nt === q) s = Math.max(s, 900);
@@ -185,6 +191,7 @@
   }
   function tagOf(d) {
     if (d.hasCifra) return '<span class="tag cifra">Cifra</span>';
+    if (d.k === "letra") return '<span class="tag letra">Letra</span>';
     if (d.k === "parte") return '<span class="tag parte">' + esc(d.d[0][1].split(" · ")[0]) + "</span>";
     return '<span class="tag partitura">Partitura</span>';
   }
@@ -341,12 +348,48 @@
     $("vStar").classList.toggle("on", favs.indexOf(d.key) >= 0);
     tabs();
     showViewer();
-    loadPdf(curDocs[idx][0], curDocs[idx][2], curDocs[idx][3]);
+    var di = curDocs[idx];
+    if (/^L\d+$/.test(di[0])) showLyrics(+di[0].slice(1));
+    else loadPdf(di[0], di[2], di[3]);
   }
+
+  // Letra em texto (slides oficiais)
+  var lyricsOn = false;
+  function showLyrics(n) {
+    token++;
+    if (doc) { doc.destroy(); doc = null; docId = null; }
+    lyricsOn = true; modeBtn();
+    var html = "", txt = LETRAS[n] || "";
+    txt.split(/\n{2,}/).forEach(function (st) {
+      html += '<div class="stanza">' + st.split("\n").map(function (ln) {
+        return ln.charAt(0) === "§" ? '<div class="lmark">' + esc(ln.slice(1)) + "</div>" : '<div class="ln">' + (esc(ln) || "&nbsp;") + "</div>";
+      }).join("") + "</div>";
+    });
+    $("pages").innerHTML = '<article class="lyrics">' + html + "</article>";
+    $("pages").dataset.n = 0;
+    lyricZoom(); $("pages").scrollTop = 0;
+  }
+  function lyricZoom() {
+    var a = $("pages").querySelector(".lyrics");
+    if (a) a.style.fontSize = (19 * zoom).toFixed(1) + "px";
+  }
+
+  // Recorte: só a parte principal (cifras + melodia + letra) ou a grade completa
+  var cropOn = load("lv.crop", true);
+  function modeBtn() {
+    var b = $("vMode");
+    var has = !lyricsOn && docId && RECORTES[docId];
+    b.hidden = !has;
+    if (has) { b.textContent = cropOn ? "Melodia" : "Grade"; b.setAttribute("aria-pressed", cropOn); }
+  }
+  $("vMode").addEventListener("click", function () {
+    cropOn = !cropOn; save("lv.crop", cropOn); modeBtn();
+    if (doc) layout();
+  });
   function openCad(c, page) {
     cur = null; curDocs = [[c.id, c.k, 0, 0]]; curIdx = 0;
     $("vNum").textContent = ""; $("vName").textContent = c.t; $("vStar").hidden = true;
-    tabs(); showViewer(); loadPdf(c.id, 0, 0, page);
+    tabs(); showViewer(); lyricsOn = false; loadPdf(c.id, 0, 0, page);
   }
   function tabs() {
     if (curDocs.length < 2) {
@@ -370,7 +413,7 @@
   function closeViewer() {
     $("viewer").hidden = true; document.documentElement.style.overflow = "";
     token++; if (doc) { doc.destroy(); doc = null; docId = null; }
-    $("pages").innerHTML = ""; $("pageInd").hidden = true;
+    $("pages").innerHTML = ""; $("pageInd").hidden = true; lyricsOn = false; $("vMode").hidden = true;
     keepAwake(false);
     renderChips(); run();
   }
@@ -400,6 +443,7 @@
     zoom = Math.max(0.5, Math.min(4, Math.round(z * 100) / 100));
     $("zVal").textContent = Math.round(zoom * 100) + "%";
     save("lv.zoom", zoom);
+    if (lyricsOn) { lyricZoom(); return; }
     if (!doc) return;
     var rel = anchor || { x: box.clientWidth / 2, y: box.clientHeight / 2 };
     var fx = (box.scrollLeft + rel.x) / Math.max(1, box.scrollWidth), fy = (box.scrollTop + rel.y) / Math.max(1, box.scrollHeight);
@@ -417,7 +461,7 @@
     var box = $("pages"), start = 0, z0 = 1, mid = null, ratio = 1;
     function dist(t) { var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx * dx + dy * dy); }
     box.addEventListener("touchstart", function (e) {
-      if (e.touches.length === 2 && doc) {
+      if (e.touches.length === 2 && (doc || lyricsOn)) {
         start = dist(e.touches); z0 = zoom; ratio = 1;
         var r = box.getBoundingClientRect();
         mid = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top };
@@ -442,9 +486,11 @@
 
   var range = [1, 0];
   function loadPdf(id, from, to, jump) {
+    lyricsOn = false;
     var t = ++token;
     var nr = [from || 1, to || (from ? from : 0)];
     if (doc && docId === id) {
+      modeBtn();
       if (nr[0] !== range[0] || nr[1] !== range[1]) { range = nr; layout(function () { scrollToPage(jump); }); }
       else scrollToPage(jump);
       return;
@@ -459,7 +505,7 @@
       })
       .then(function (pdf) {
         if (!pdf || t !== token) return;
-        doc = pdf; docId = id;
+        doc = pdf; docId = id; modeBtn();
         layout(function () { scrollToPage(jump); });
       })
       .catch(function (err) {
@@ -492,27 +538,44 @@
       }, { root: box, rootMargin: "1500px 200px" });
       var last = Math.min(range[1] || pdf.numPages, pdf.numPages), first = Math.min(range[0], last);
       box.dataset.n = last - first + 1; box.dataset.first = first;
+      var crops = cropOn && RECORTES[docId];
       for (var i = first; i <= last; i++) {
-        var el = document.createElement("div");
-        el.className = "page"; el.dataset.p = i;
-        el.style.width = width + "px"; el.style.height = Math.round(width * ratio) + "px";
-        if (width > box.clientWidth) el.style.margin = "0 8px 10px";
-        box.appendChild(el); observer.observe(el);
+        var bands = crops && crops[i - 1] && crops[i - 1].length ? crops[i - 1] : [[0, 1]];
+        bands.forEach(function (b, bi) {
+          var el = document.createElement("div");
+          el.className = "page" + (bands.length > 1 || b[1] - b[0] < 1 ? " strip" : "");
+          el.dataset.p = i; el.dataset.b0 = b[0]; el.dataset.b1 = b[1];
+          el.style.width = width + "px"; el.style.height = Math.round(width * ratio * (b[1] - b[0])) + "px";
+          if (width > box.clientWidth) el.style.margin = "0 8px 10px";
+          box.appendChild(el); observer.observe(el);
+        });
       }
       if (after) after();
     });
-    function draw(el) {
-      pdf.getPage(+el.dataset.p).then(function (page) {
-        if (t !== token) return;
+    var rendered = {};
+    function pageCanvas(n) {
+      if (!rendered[n]) rendered[n] = pdf.getPage(n).then(function (page) {
         var vp1 = page.getViewport({ scale: 1 });
-        el.style.height = Math.round(width * vp1.height / vp1.width) + "px";
         var scale = (width / vp1.width) * dpr;
         var maxPx = 14e6; if (vp1.width * vp1.height * scale * scale > maxPx) scale = Math.sqrt(maxPx / (vp1.width * vp1.height));
         var vp = page.getViewport({ scale: scale });
         var c = document.createElement("canvas");
         c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+        return page.render({ canvasContext: c.getContext("2d", { alpha: false }), viewport: vp }).promise.then(function () { return { c: c, ratio: vp1.height / vp1.width }; });
+      });
+      return rendered[n];
+    }
+    function draw(el) {
+      var b0 = +el.dataset.b0, b1 = +el.dataset.b1;
+      pageCanvas(+el.dataset.p).then(function (r) {
+        if (t !== token) return;
+        el.style.height = Math.round(width * r.ratio * (b1 - b0)) + "px";
+        var full = r.c, y0 = Math.floor(b0 * full.height), h = Math.max(1, Math.ceil((b1 - b0) * full.height));
+        if (b0 === 0 && b1 === 1) { el.appendChild(full); return; }
+        var c = document.createElement("canvas");
+        c.width = full.width; c.height = h;
+        c.getContext("2d", { alpha: false }).drawImage(full, 0, y0, full.width, h, 0, 0, full.width, h);
         el.appendChild(c);
-        page.render({ canvasContext: c.getContext("2d", { alpha: false }), viewport: vp });
       });
     }
   }
@@ -522,8 +585,8 @@
   $("pages").addEventListener("scroll", function () {
     var box = $("pages"), total = +box.dataset.n || 0;
     if (!doc || total < 2) return;
-    var ps = box.querySelectorAll(".page"), mid = box.scrollTop + box.clientHeight / 3, n = 1;
-    for (var i = 0; i < ps.length; i++) { if (ps[i].offsetTop <= mid) n = i + 1; else break; }
+    var ps = box.querySelectorAll(".page"), mid = box.scrollTop + box.clientHeight / 3, n = 1, f0 = +box.dataset.first || 1;
+    for (var i = 0; i < ps.length; i++) { if (ps[i].offsetTop <= mid) n = +ps[i].dataset.p - f0 + 1; else break; }
     var ind = $("pageInd"); ind.textContent = n + " / " + total; ind.hidden = false; ind.style.opacity = 1;
     clearTimeout(indT); indT = setTimeout(function () { ind.style.opacity = 0; }, 1200);
   }, { passive: true });

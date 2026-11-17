@@ -212,3 +212,15 @@ mark { background: color-mix(in srgb, var(--gold) 32%, transparent); color: inhe
 .opts { display: flex; gap: 8px; margin-top: 14px; }
 .opts button { flex: 1; border: 1px solid var(--line); background: var(--bg); border-radius: 11px; padding: 9px; font-size: 13px; font-weight: 700; }
 .opts button[aria-pressed="true"] { border-color: var(--red); color: var(--red-ink); background: var(--red-soft); }
+
+/* ---------- Letra (texto) ---------- */
+.lyrics { max-width: 680px; margin: 0 auto; padding: 18px 22px 40px; background: var(--card); color: var(--ink); min-height: 100%; font-size: 19px; line-height: 1.5; }
+.viewer .pages:has(.lyrics) { background: var(--card); padding-top: 0; }
+.stanza { margin: 0 0 1.1em; }
+.ln { font-weight: 500; padding-left: 1em; text-indent: -1em; }
+.lmark { display: inline-block; font-size: .68em; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--red-ink); background: var(--red-soft); border-radius: 6px; padding: 2px 8px; margin: 2px 0 6px; }
+
+/* ---------- Recorte das grades ---------- */
+.page.strip { margin-bottom: 6px; border-radius: 3px; }
+.mode { flex: none; border: 1px solid var(--red); background: var(--red-soft); color: var(--red-ink); border-radius: 999px; padding: 6px 11px; font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.mode[aria-pressed="false"] { background: var(--bg); color: var(--muted); border-color: var(--line); }

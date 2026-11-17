@@ -1,6 +1,6 @@
 # Louvores
 
-Site de consulta de cifras e partituras dos louvores (Igreja Cristã Maranata) que **funciona sem internet** no celular.
+Site de consulta de cifras, partituras e letras dos louvores (Igreja Cristã Maranata) que **funciona sem internet** no celular.
 
 - O site fica na pasta `docs/`, que é estática: dá para publicar no GitHub Pages ou na Vercel com Root Directory = `docs`.
 - Na primeira visita com internet, ele salva todos os PDFs no aparelho. No iPhone, abra no Safari → Compartilhar → **Adicionar à Tela de Início**.
