@@ -1,7 +1,7 @@
 """Gera docs/data.js + copia PDFs. Entrada: songs2.json, cadernos.json, pdf/, txt/."""
 import json, re, os, shutil, unicodedata, hashlib, subprocess, collections
 
-# Rode a partir da pasta de trabalho (files.json, songs2.json, cadernos.json, letras_slides.json, pdf/ e txt/).
+# Rode a partir da pasta de trabalho (files.json, songs2.json, cadernos.json, letras_slides.json, cifras.json, pdf/ e txt/).
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(TOOLS, "..", "docs")
 
@@ -279,20 +279,41 @@ for fn in os.listdir(f"{OUT}/pdf"):
     if fn[:-4] not in keep: os.remove(f"{OUT}/pdf/{fn}")
 sizes = {fid: os.path.getsize(f"{OUT}/pdf/{fid}.pdf") for fid in keep}
 
+# ---- cifras em texto (acordes + letra, com troca de tom no app) ----
+CIFRAS = {}
+if os.path.exists("cifras.json"):
+    allc = json.load(open("cifras.json"))
+    for s_ in data:
+        got = False
+        for doc in list(s_["d"]):
+            if not doc[1].startswith(("Cifra", "Harmonia")) or doc[0].startswith(("L", "C:")): continue
+            key = doc[0] + (":%d" % doc[2] if doc[2] else "")
+            if key in allc and not got:
+                CIFRAS[key] = {"k": allc[key]["key"], "l": allc[key]["lines"]}
+                s_["d"].insert(0, ["C:" + key, "Cifra", 0, 0])
+                got = True
+            if key in allc:
+                doc[1] = doc[1].replace("Cifra", "Cifra (PDF)", 1).replace("Harmonia", "Harmonia (PDF)", 1)
+        if got:
+            s_["k"] = "cifra"
+            s_["x"] = s_["x"]  # texto de busca já inclui a cifra
+print("cifras em texto:", len(CIFRAS))
+
 # ---- recorte das grades: só a parte principal (cifras + melodia + letra) ----
 import sys as _sys
 _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import crop as _crop
 from concurrent.futures import ThreadPoolExecutor as _TPE
-grade_ids = sorted({x[0] for s_ in data for x in s_["d"] if not x[0].startswith("L") and not x[2] and not x[1].startswith(("Cifra", "Harmonia", "Letra"))})
+grade_ids = sorted({x[0] for s_ in data for x in s_["d"] if not x[0].startswith(("L", "C:")) and not x[2] and not x[1].startswith(("Cifra", "Harmonia", "Letra"))})
 with _TPE(8) as _ex:
     RECORTES = {fid: r for fid, r in _ex.map(_crop.analyse, grade_ids) if r}
 print("grades recortadas:", len(RECORTES), "de", len(grade_ids))
 
-ver = hashlib.sha1(json.dumps([data, cad_out, RECORTES], sort_keys=True).encode()).hexdigest()[:10]
+ver = hashlib.sha1(json.dumps([data, cad_out, RECORTES, CIFRAS], sort_keys=True).encode()).hexdigest()[:10]
 with open(f"{OUT}/data.js", "w") as f:
     f.write("window.LOUVORES=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
     f.write("window.LETRAS=" + json.dumps(LETRAS, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    f.write("window.CIFRAS=" + json.dumps(CIFRAS, ensure_ascii=False, separators=(",", ":")) + ";\n")
     f.write("window.RECORTES=" + json.dumps(RECORTES, separators=(",", ":")) + ";\n")
     f.write("window.CADERNOS=" + json.dumps(cad_out, ensure_ascii=False, separators=(",", ":")) + ";\n")
     f.write("window.ARQUIVOS=" + json.dumps(sizes, separators=(",", ":")) + ";\n")

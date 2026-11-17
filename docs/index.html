@@ -52,22 +52,48 @@
 </main>
 
 <section id="viewer" class="viewer" hidden aria-modal="true" role="dialog" aria-labelledby="vName">
-  <div class="vbar">
-    <button id="vBack" class="vbtn" type="button" aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <div class="vtitle"><span id="vNum" class="vnum"></span><span id="vName"></span></div>
-    <button id="vStar" class="vbtn" type="button" aria-label="Favoritar"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></button>
-  </div>
-  <div class="vtools">
-    <div class="seg" id="vDocs" role="tablist" aria-label="Documentos"></div>
-    <button id="vMode" class="mode" type="button" hidden aria-pressed="true" title="Alternar entre só a melodia com cifras e a grade completa">Melodia</button>
-    <div class="zoom">
-      <button id="zOut" class="zbtn" type="button" aria-label="Diminuir">−</button>
-      <button id="zVal" class="zval" type="button" aria-label="Ajustar à largura">100%</button>
-      <button id="zIn" class="zbtn" type="button" aria-label="Aumentar">+</button>
-    </div>
-  </div>
+  <header class="vbar">
+    <button id="vBack" class="ib" type="button" aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button id="vTitleBtn" class="vt" type="button" aria-label="Abrir menu"><span id="vName" class="vname"></span><span id="vSub" class="vsub"></span></button>
+    <button id="vMenu" class="ib" type="button" aria-label="Menu" aria-controls="drawer" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+  </header>
   <div id="pages" class="pages"></div>
   <div id="pageInd" class="page-ind" hidden></div>
+  <button id="scrollFab" class="fab" type="button" hidden aria-label="Parar rolagem"><svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+  <div id="drawerBg" class="drawer-bg" hidden></div>
+  <aside id="drawer" class="drawer" aria-label="Opções do louvor" aria-hidden="true">
+    <div class="dh">
+      <div class="dnum" id="dNum"></div>
+      <div class="dtitle" id="dTitle"></div>
+      <div class="dcol" id="dCol"></div>
+    </div>
+    <div class="dsec" id="secDocs"><div class="dlab">Ver</div><div id="dDocs" class="dlist" role="tablist"></div></div>
+    <div class="dsec" id="secTom">
+      <div class="dlab">Tom <span id="tomOrig" class="dhint"></span></div>
+      <div class="drow"><button id="tomDown" class="dstep" type="button" aria-label="Meio tom abaixo">−½</button><div id="keyV" class="dval"></div><button id="tomUp" class="dstep" type="button" aria-label="Meio tom acima">+½</button></div>
+      <div id="keyGrid" class="keys"></div>
+      <button id="tomReset" class="dlink" type="button">Voltar ao tom original</button>
+    </div>
+    <div class="dsec">
+      <div class="dlab">Tamanho</div>
+      <div class="drow"><button id="zOut" class="dstep" type="button" aria-label="Diminuir">A−</button><button id="zVal" class="dval" type="button" aria-label="Tamanho normal">100%</button><button id="zIn" class="dstep" type="button" aria-label="Aumentar">A+</button></div>
+    </div>
+    <div class="dsec" id="secMode">
+      <div class="dlab">Partitura</div>
+      <div class="dseg"><button type="button" data-m="1">Só melodia</button><button type="button" data-m="0">Grade completa</button></div>
+    </div>
+    <div class="dsec" id="secChords">
+      <label class="dsw"><span>Mostrar acordes</span><input type="checkbox" id="optChords" checked><i></i></label>
+    </div>
+    <div class="dsec">
+      <div class="dlab">Rolagem automática</div>
+      <div class="drow"><button id="scrollBtn" class="dplay" type="button">▶ Rolar</button><input id="scrollSpeed" type="range" min="1" max="10" step="1" aria-label="Velocidade"></div>
+    </div>
+    <div class="dsec dbtns">
+      <button id="vStar" class="dbtn" type="button">☆ Favoritar</button>
+      <button id="pasteBtn" class="dbtn" type="button">Colar uma cifra</button>
+    </div>
+  </aside>
 </section>
 
 <script src="data.js"></script>

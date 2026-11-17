@@ -314,6 +314,7 @@
   });
 
   // ---------- Visualizador ----------
+  var CIFRAS = window.CIFRAS || {};
   var pdfjsP = null;
   function pdfjs() {
     if (!pdfjsP) pdfjsP = import("./lib/pdf.min.mjs").then(function (m) {
@@ -322,7 +323,15 @@
     });
     return pdfjsP;
   }
-  var cur = null, curDocs = [], curIdx = 0, doc = null, docId = null, zoom = load("lv.zoom", 1), observer = null, token = 0, wake = null;
+  var cur = null, curDocs = [], curIdx = 0, doc = null, docId = null, observer = null, token = 0, wake = null;
+  var zoom = load("lv.zoom", 1);           // PDFs
+  var tzoom = load("lv.tzoom", 1);         // cifra e letra (texto)
+  var view = "";                           // "pdf" | "cifra" | "letra"
+  var curCifra = null;                     // {k, l} da cifra aberta
+  var tons = load("lv.tons", {});          // transposição salva por louvor
+  var myCifras = load("lv.minhas", {});    // cifras coladas pelo usuário
+  var showChords = load("lv.chords", true);
+  var cropOn = load("lv.crop", true);
 
   function showViewer() {
     if ($("viewer").hidden) {
@@ -332,8 +341,13 @@
       keepAwake(true);
     }
   }
+  function docsOf(d) {
+    var list = d.d.slice();
+    if (myCifras[d.key]) list.unshift(["M:" + d.key, "Minha cifra", 0, 0]);
+    return list;
+  }
   function open(d, idx) {
-    cur = d; curDocs = d.d;
+    cur = d; curDocs = docsOf(d);
     if (idx == null) {
       idx = 0;
       var want = lastDoc[d.key];
@@ -342,92 +356,328 @@
       save("lv.recents", recents);
     }
     curIdx = idx;
-    $("vNum").textContent = d.n || "";
-    $("vName").textContent = d.t;
-    $("vStar").hidden = false;
-    $("vStar").classList.toggle("on", favs.indexOf(d.key) >= 0);
-    tabs();
+    $("vName").textContent = (d.n ? d.n + "  " : "") + d.t;
     showViewer();
+    stopScroll();
     var di = curDocs[idx];
-    if (/^L\d+$/.test(di[0])) showLyrics(+di[0].slice(1));
+    $("vSub").textContent = di[1].replace(/ · .*/, "");
+    if (/^C:/.test(di[0])) showCifra(CIFRAS[di[0].slice(2)]);
+    else if (/^M:/.test(di[0])) showCifra(parsePasted(myCifras[d.key]));
+    else if (/^L\d+$/.test(di[0])) showLyrics(+di[0].slice(1));
     else loadPdf(di[0], di[2], di[3]);
+    drawer();
   }
-
-  // Letra em texto (slides oficiais)
-  var lyricsOn = false;
-  function showLyrics(n) {
+  function openCad(c, page) {
+    cur = null; curDocs = [[c.id, c.k, 0, 0]]; curIdx = 0;
+    $("vName").textContent = c.t; $("vSub").textContent = c.k + (page > 1 ? " · pág. " + page : "");
+    showViewer(); stopScroll(); loadPdf(c.id, 0, 0, page); drawer();
+  }
+  function reset() {
     token++;
     if (doc) { doc.destroy(); doc = null; docId = null; }
-    lyricsOn = true; modeBtn();
+    if (observer) observer.disconnect();
+    $("pageInd").hidden = true;
+  }
+
+  // ---------- Acordes: leitura e transposição ----------
+  var SH = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  var FL = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+  var IDX = { C: 0, "B#": 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3, E: 4, Fb: 4, F: 5, "E#": 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11, Cb: 11 };
+  var CHORD_RE = /^([A-G])(#|b)?([^/]*?)(?:\/([A-G])(#|b)?)?$/;
+  var MAJ_KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+  var MIN_KEYS = ["Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm"];
+  function keyInfo(k) {
+    var m = /^([A-G])(#|b)?(m?)/.exec(k || "");
+    if (!m) return null;
+    return { i: IDX[m[1] + (m[2] || "")], minor: !!m[3] };
+  }
+  function keyName(i, minor) { i = ((i % 12) + 12) % 12; return minor ? MIN_KEYS[i] : MAJ_KEYS[i]; }
+  function useFlats(i, minor) {
+    var n = keyName(i, minor);
+    return /b/.test(n) || /^(F|Dm|Gm|Cm|Fm)$/.test(n);
+  }
+  function trNote(n, shift, flats) {
+    var i = IDX[n]; if (i == null) return n;
+    i = ((i + shift) % 12 + 12) % 12;
+    return (flats ? FL : SH)[i];
+  }
+  function trChord(ch, shift, flats) {
+    if (!shift) return ch;
+    var m = CHORD_RE.exec(ch);
+    if (!m) return ch;
+    var out = trNote(m[1] + (m[2] || ""), shift, flats) + m[3];
+    if (m[4]) out += "/" + trNote(m[4] + (m[5] || ""), shift, flats);
+    return out;
+  }
+  function origKey(c) {
+    if (c.k && keyInfo(c.k)) return c.k;
+    for (var i = 0; i < c.l.length; i++) {
+      var m = /\[([A-G](?:#|b)?m?)/.exec(c.l[i]);
+      if (m && c.l[i].indexOf("i:") !== 0) return m[1].replace(/m$/, "") + (/^\[[A-G](#|b)?m(?!aj)/.test(c.l[i].slice(m.index)) ? "m" : "");
+    }
+    return "C";
+  }
+
+  // ---------- Cifra (estilo Cifra Club) ----------
+  function cifraShift() { return (cur && tons[cur.key]) || 0; }
+  function showCifra(c) {
+    reset(); view = "cifra"; curCifra = c;
+    if (!c) { $("pages").innerHTML = '<div class="vmsg">Cifra não encontrada.</div>'; return; }
+    renderCifra();
+    $("pages").scrollTop = 0;
+  }
+  function renderCifra() {
+    var c = curCifra; if (!c) return;
+    var ok = keyInfo(origKey(c)), shift = cifraShift();
+    var flats = ok ? useFlats(ok.i + shift, ok.minor) : false;
+    var html = "", stanza = [];
+    function chordHTML(ch) { return '<b class="ch">' + esc(trChord(ch, shift, flats)) + "</b>"; }
+    function flush() { if (stanza.length) { html += '<div class="cs">' + stanza.join("") + "</div>"; stanza = []; } }
+    c.l.forEach(function (line) {
+      if (!line) { flush(); return; }
+      var t = line.slice(0, 2), s = line.slice(2);
+      if (t === "h:") { flush(); stanza.push('<div class="ch-h">' + esc(s) + "</div>"); return; }
+      if (t === "t:") { stanza.push('<div class="cl">' + (esc(s) || "&nbsp;") + "</div>"); return; }
+      if (t === "p:") { stanza.push('<pre class="cp">' + esc(s) + "</pre>"); return; }
+      if (t === "i:" || t === "a:") {
+        if (!showChords) return;
+        stanza.push('<div class="ci">' + s.split(/(\[[^\]]+\])/).map(function (p) {
+          return /^\[.+\]$/.test(p) ? chordHTML(p.slice(1, -1)) : esc(p);
+        }).join("") + "</div>");
+        return;
+      }
+      // linha cantada: cada palavra é um bloco (acorde em cima, sílaba embaixo)
+      if (!showChords) { stanza.push('<div class="cl">' + esc(s.replace(/\[[^\]]+\]/g, "")) + "</div>"); return; }
+      var parts = s.split(/(\[[^\]]+\])/), out = "", pend = null;
+      function seg(ch, txt) {
+        return '<span class="sg"><b class="ch">' + (ch ? esc(trChord(ch, shift, flats)) : "") + '</b><span class="sy">' + (txt ? esc(txt) : "&nbsp;") + "</span></span>";
+      }
+      function words(txt, ch) {
+        var ws = txt.match(/\S+\s*|\s+/g) || [];
+        if (!ws.length && ch) { out += seg(ch, "\u00a0\u00a0"); return; }
+        ws.forEach(function (w, k) { out += seg(k === 0 ? ch : null, w); });
+      }
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i];
+        if (/^\[.+\]$/.test(p)) {
+          if (pend !== null) out += seg(pend, "\u00a0\u00a0");
+          pend = p.slice(1, -1);
+        } else if (p) { words(p, pend); pend = null; }
+      }
+      if (pend !== null) out += seg(pend, "\u00a0\u00a0");
+      stanza.push('<div class="cl has">' + out + "</div>");
+    });
+    flush();
+    $("pages").innerHTML = '<article class="cifra" style="font-size:' + (17 * tzoom).toFixed(1) + 'px">' + html + "</article>";
+    tomUI();
+  }
+  function setTom(shift) {
+    if (!cur) return;
+    shift = ((shift % 12) + 18) % 12 - 6;   // entre -6 e +5
+    if (shift) tons[cur.key] = shift; else delete tons[cur.key];
+    save("lv.tons", tons);
+    var y = $("pages").scrollTop; renderCifra(); $("pages").scrollTop = y;
+  }
+  function tomUI() {
+    if (view !== "cifra" || !curCifra) return;
+    var ok = keyInfo(origKey(curCifra)), shift = cifraShift();
+    if (!ok) return;
+    $("keyV").textContent = keyName(ok.i + shift, ok.minor);
+    $("tomOrig").textContent = "original: " + keyName(ok.i, ok.minor);
+    $("keyGrid").innerHTML = (ok.minor ? MIN_KEYS : MAJ_KEYS).map(function (k, i) {
+      var sel = ((ok.i + shift) % 12 + 12) % 12 === i;
+      return '<button type="button" data-k="' + i + '" class="' + (sel ? "on" : "") + (i === ok.i ? " orig" : "") + '">' + k + "</button>";
+    }).join("");
+    $("tomReset").hidden = !shift;
+  }
+  $("tomUp").addEventListener("click", function () { setTom(cifraShift() + 1); });
+  $("tomDown").addEventListener("click", function () { setTom(cifraShift() - 1); });
+  $("tomReset").addEventListener("click", function () { setTom(0); });
+  $("keyGrid").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-k]"); if (!b || !curCifra) return;
+    var ok = keyInfo(origKey(curCifra)); setTom(+b.getAttribute("data-k") - ok.i);
+  });
+  $("optChords").addEventListener("change", function () {
+    showChords = this.checked; save("lv.chords", showChords);
+    if (view === "cifra") renderCifra();
+  });
+
+  // Cifra colada (texto do Cifra Club ou de qualquer site): acordes em cima, letra embaixo
+  var TOK_CHORD = /^\(?[A-G](#|b)?(maj|min|m|M|dim|aug|sus|add|º|°|ø|\+)?[0-9]*(\([^)\s]{1,12}\))?(maj|sus|add|m)?[0-9]*(\/[A-G](#|b)?)?\)?$/;
+  function isChordTok(t) { return TOK_CHORD.test(t) || /^(\||%|-|\(?\d+x\)?|x\d+)$/i.test(t); }
+  function isChordLineTxt(l) {
+    var toks = l.trim().split(/\s+/);
+    return toks[0] !== "" && toks.every(isChordTok) && toks.some(function (t) { return TOK_CHORD.test(t); });
+  }
+  function parsePasted(text) {
+    var src = String(text || "").replace(/\r/g, "").replace(/\t/g, "    ").split("\n"), out = [], key = "";
+    for (var i = 0; i < src.length; i++) {
+      var l = src[i].replace(/\s+$/, "");
+      var km = /^\s*tom:\s*([A-G](#|b)?m?)/i.exec(l);
+      if (km) { key = km[1]; continue; }
+      if (!l.trim()) { if (out.length && out[out.length - 1] !== "") out.push(""); continue; }
+      if (/^\s*[eEADGBb]\s*\|[-\d|hpbr~\/\\x ]*\|?\s*$/.test(l)) { out.push("p:" + l); continue; }      // tablatura
+      var tag = /^\s*\[([^\]]+)\]\s*(.*)$/.exec(l);                                                    // [Intro] A B C
+      if (tag && !TOK_CHORD.test(tag[1])) {
+        var rest = tag[2].trim();
+        if (rest && rest.split(/\s+/).some(function (t) { return TOK_CHORD.test(t); }))
+          out.push("i:" + tag[1] + ": " + rest.split(/(\s+)/).map(function (t) { return TOK_CHORD.test(t) ? "[" + t + "]" : t; }).join(""));
+        else out.push("h:" + tag[1] + (rest ? " " + rest : ""));
+        continue;
+      }
+      if (isChordLineTxt(l)) {
+        var nx = src[i + 1] != null ? src[i + 1].replace(/\s+$/, "") : "";
+        var chords = [], re = /\S+/g, m;
+        while ((m = re.exec(l))) chords.push([m.index, m[0]]);
+        if (nx.trim() && !isChordLineTxt(nx) && !/^\s*\[/.test(nx)) {
+          var lyr = nx, res = "", last = 0;
+          chords.forEach(function (c) {
+            if (!TOK_CHORD.test(c[1])) return;
+            var pos = Math.min(c[0], lyr.length);
+            res += lyr.slice(last, pos) + "[" + c[1].replace(/^\(|\)$/g, "") + "]"; last = pos;
+          });
+          res += lyr.slice(last);
+          out.push("c:" + res.replace(/^\s+/, "").replace(/ {2,}/g, " "));
+          i++;
+        } else {
+          out.push("a:" + chords.map(function (c) { return TOK_CHORD.test(c[1]) ? "[" + c[1].replace(/^\(|\)$/g, "") + "]" : c[1]; }).join("  "));
+        }
+        continue;
+      }
+      out.push("t:" + l.trim());
+    }
+    while (out.length && out[out.length - 1] === "") out.pop();
+    return { k: key, l: out };
+  }
+  function pasteSheet() {
+    if (!cur) return;
+    closeDrawer();
+    var bg = document.createElement("div"); bg.className = "sheet-bg";
+    bg.innerHTML = '<div class="sheet" role="dialog" aria-label="Colar cifra"><h2>Colar uma cifra</h2>' +
+      "<p>Copie a cifra (por exemplo, do app do Cifra Club) e cole aqui, com os acordes em cima da letra. Ela fica salva neste aparelho e muda de tom sozinha.</p>" +
+      '<textarea id="pasteTxt" spellcheck="false" placeholder="Tom: G&#10;&#10;[Intro] G D Em C&#10;&#10;G          D&#10;Letra da música..."></textarea>' +
+      '<div class="act">' + (myCifras[cur.key] ? '<button class="btn ghost" data-a="del">Apagar</button>' : "") +
+      '<button class="btn ghost" data-a="x">Cancelar</button><button class="btn" data-a="ok">Salvar</button></div></div>';
+    document.body.appendChild(bg);
+    var ta = bg.querySelector("#pasteTxt"); ta.value = myCifras[cur.key] || "";
+    setTimeout(function () { ta.focus(); }, 50);
+    bg.addEventListener("click", function (e) {
+      var a = e.target.getAttribute("data-a");
+      if (e.target === bg || a === "x") bg.remove();
+      if (a === "del") { delete myCifras[cur.key]; save("lv.minhas", myCifras); bg.remove(); open(cur, 0); }
+      if (a === "ok") {
+        var v = ta.value.trim();
+        if (!v) { bg.remove(); return; }
+        myCifras[cur.key] = v; save("lv.minhas", myCifras); bg.remove();
+        lastDoc[cur.key] = "Minha cifra"; save("lv.lastDoc", lastDoc);
+        open(cur, 0);
+      }
+    });
+  }
+  $("pasteBtn").addEventListener("click", pasteSheet);
+
+  // ---------- Letra em texto ----------
+  function showLyrics(n) {
+    reset(); view = "letra";
     var html = "", txt = LETRAS[n] || "";
     txt.split(/\n{2,}/).forEach(function (st) {
       html += '<div class="stanza">' + st.split("\n").map(function (ln) {
         return ln.charAt(0) === "§" ? '<div class="lmark">' + esc(ln.slice(1)) + "</div>" : '<div class="ln">' + (esc(ln) || "&nbsp;") + "</div>";
       }).join("") + "</div>";
     });
-    $("pages").innerHTML = '<article class="lyrics">' + html + "</article>";
-    $("pages").dataset.n = 0;
-    lyricZoom(); $("pages").scrollTop = 0;
-  }
-  function lyricZoom() {
-    var a = $("pages").querySelector(".lyrics");
-    if (a) a.style.fontSize = (19 * zoom).toFixed(1) + "px";
+    $("pages").innerHTML = '<article class="lyrics" style="font-size:' + (19 * tzoom).toFixed(1) + 'px">' + html + "</article>";
+    $("pages").scrollTop = 0;
   }
 
-  // Recorte: só a parte principal (cifras + melodia + letra) ou a grade completa
-  var cropOn = load("lv.crop", true);
-  function modeBtn() {
-    var b = $("vMode");
-    var has = !lyricsOn && docId && RECORTES[docId];
-    b.hidden = !has;
-    if (has) { b.textContent = cropOn ? "Melodia" : "Grade"; b.setAttribute("aria-pressed", cropOn); }
-  }
-  $("vMode").addEventListener("click", function () {
-    cropOn = !cropOn; save("lv.crop", cropOn); modeBtn();
-    if (doc) layout();
-  });
-  function openCad(c, page) {
-    cur = null; curDocs = [[c.id, c.k, 0, 0]]; curIdx = 0;
-    $("vNum").textContent = ""; $("vName").textContent = c.t; $("vStar").hidden = true;
-    tabs(); showViewer(); lyricsOn = false; loadPdf(c.id, 0, 0, page);
-  }
-  function tabs() {
-    if (curDocs.length < 2) {
-      var l = curDocs[0][1];
-      $("vDocs").innerHTML = '<span class="one">' + esc(l) + "</span>";
-      return;
-    }
-    $("vDocs").innerHTML = curDocs.map(function (x, i) {
-      return '<button type="button" role="tab" data-i="' + i + '" aria-selected="' + (i === curIdx) + '">' + esc(x[1]) + "</button>";
+  // ---------- Menu lateral ----------
+  function drawer() {
+    var d = cur;
+    $("dNum").textContent = d && d.n ? d.n : "";
+    $("dTitle").textContent = d ? d.t : $("vName").textContent;
+    $("dCol").textContent = d ? d.cs : "Caderno";
+    $("dDocs").innerHTML = curDocs.map(function (x, i) {
+      var ic = /^(C:|M:)/.test(x[0]) ? "♪" : /^L\d/.test(x[0]) ? "¶" : "▤";
+      return '<button type="button" role="tab" data-i="' + i + '" aria-selected="' + (i === curIdx) + '"><span class="di">' + ic + "</span>" + esc(x[1]) + "</button>";
     }).join("");
-    var sel = $("vDocs").querySelector('[aria-selected="true"]');
-    if (sel && sel.scrollIntoView) sel.scrollIntoView({ inline: "nearest", block: "nearest" });
+    $("secDocs").hidden = curDocs.length < 2;
+    $("secTom").hidden = view !== "cifra";
+    $("secChords").hidden = view !== "cifra";
+    $("optChords").checked = showChords;
+    $("secMode").hidden = !(view === "pdf" && docId && RECORTES[docId]);
+    $("secMode").querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", (b.getAttribute("data-m") === "1") === cropOn); });
+    $("zVal").textContent = Math.round((view === "pdf" ? zoom : tzoom) * 100) + "%";
+    $("vStar").hidden = !d;
+    $("pasteBtn").hidden = !d;
+    if (d) $("vStar").textContent = favs.indexOf(d.key) >= 0 ? "★ Nos favoritos" : "☆ Favoritar";
+    $("pasteBtn").textContent = d && myCifras[d.key] ? "Editar minha cifra" : "Colar uma cifra";
+    tomUI();
   }
-  $("vDocs").addEventListener("click", function (e) {
-    var b = e.target.closest("button[data-i]"); if (!b || !cur) return;
+  function openDrawer() {
+    drawer();
+    $("drawerBg").hidden = false;
+    $("drawer").classList.add("open"); $("drawer").setAttribute("aria-hidden", "false");
+    $("vMenu").setAttribute("aria-expanded", "true");
+  }
+  function closeDrawer() {
+    $("drawerBg").hidden = true;
+    $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden", "true");
+    $("vMenu").setAttribute("aria-expanded", "false");
+  }
+  $("vMenu").addEventListener("click", function () { $("drawer").classList.contains("open") ? closeDrawer() : openDrawer(); });
+  $("vTitleBtn").addEventListener("click", openDrawer);
+  $("drawerBg").addEventListener("click", closeDrawer);
+  $("dDocs").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-i]"); if (!b) return;
     var i = +b.getAttribute("data-i");
-    lastDoc[cur.key] = curDocs[i][1]; save("lv.lastDoc", lastDoc);
-    open(cur, i);
+    if (cur) { lastDoc[cur.key] = curDocs[i][1]; save("lv.lastDoc", lastDoc); open(cur, i); }
+    closeDrawer();
   });
+  $("secMode").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-m]"); if (!b) return;
+    cropOn = b.getAttribute("data-m") === "1"; save("lv.crop", cropOn);
+    drawer(); if (doc) layout();
+  });
+  // deslizar da borda direita abre o menu; deslizar para a direita fecha
+  (function swipe() {
+    var sx = 0, sy = 0, from = null;
+    $("viewer").addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1) { from = null; return; }
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+      from = $("drawer").classList.contains("open") ? "open" : (sx > window.innerWidth - 24 ? "edge" : null);
+    }, { passive: true });
+    $("viewer").addEventListener("touchend", function (e) {
+      if (!from) return;
+      var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 50 && Math.abs(dy) < 60) {
+        if (from === "edge" && dx < 0) openDrawer();
+        if (from === "open" && dx > 0) closeDrawer();
+      }
+      from = null;
+    }, { passive: true });
+  })();
 
   function closeViewer() {
+    closeDrawer(); stopScroll();
     $("viewer").hidden = true; document.documentElement.style.overflow = "";
-    token++; if (doc) { doc.destroy(); doc = null; docId = null; }
-    $("pages").innerHTML = ""; $("pageInd").hidden = true; lyricsOn = false; $("vMode").hidden = true;
+    reset(); view = ""; curCifra = null;
+    $("pages").innerHTML = "";
     keepAwake(false);
     renderChips(); run();
   }
   $("vBack").addEventListener("click", function () { history.back(); });
   window.addEventListener("popstate", function () { if (!$("viewer").hidden) closeViewer(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("viewer").hidden) history.back(); });
+  document.addEventListener("keydown", function (e) {
+    if ($("viewer").hidden) return;
+    if (e.key === "Escape") { if ($("drawer").classList.contains("open")) closeDrawer(); else history.back(); }
+  });
   $("vStar").addEventListener("click", function () {
     if (!cur) return;
     var i = favs.indexOf(cur.key);
     if (i >= 0) favs.splice(i, 1); else favs.unshift(cur.key);
-    save("lv.favs", favs); $("vStar").classList.toggle("on", i < 0);
+    save("lv.favs", favs); drawer();
   });
 
-  // Tela sempre acesa enquanto a partitura está aberta
+  // Tela sempre acesa enquanto o louvor está aberto
   function keepAwake(on) {
     try {
       if (on && "wakeLock" in navigator) navigator.wakeLock.request("screen").then(function (l) { wake = l; }).catch(function () {});
@@ -436,14 +686,41 @@
   }
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && !$("viewer").hidden) keepAwake(true); });
 
-  // Zoom (botões + gesto de pinça)
+  // ---------- Rolagem automática ----------
+  var scrollSpeed = load("lv.speed", 3), rolling = false, rollLast = 0, rollAcc = 0;
+  $("scrollSpeed").value = scrollSpeed;
+  function rollFrame(ts) {
+    if (!rolling) return;
+    if (rollLast) {
+      var box = $("pages");
+      rollAcc += (ts - rollLast) / 1000 * (6 + scrollSpeed * 7) * (view === "pdf" ? zoom : tzoom);
+      var step = Math.floor(rollAcc);
+      if (step) { box.scrollTop += step; rollAcc -= step; }
+      if (box.scrollTop + box.clientHeight >= box.scrollHeight - 2) { stopScroll(); return; }
+    }
+    rollLast = ts; requestAnimationFrame(rollFrame);
+  }
+  function startScroll() { rolling = true; rollLast = 0; rollAcc = 0; $("scrollFab").hidden = false; $("scrollBtn").textContent = "❚❚ Parar"; requestAnimationFrame(rollFrame); }
+  function stopScroll() { rolling = false; $("scrollFab").hidden = true; $("scrollBtn").textContent = "▶ Rolar"; }
+  $("scrollBtn").addEventListener("click", function () { if (rolling) stopScroll(); else { startScroll(); closeDrawer(); } });
+  $("scrollFab").addEventListener("click", stopScroll);
+  $("scrollSpeed").addEventListener("input", function () { scrollSpeed = +this.value; save("lv.speed", scrollSpeed); });
+
+  // ---------- Tamanho / zoom ----------
   function setZoom(z, anchor) {
     var box = $("pages");
-    var old = zoom;
+    if (view !== "pdf") {
+      var y = box.scrollTop / Math.max(1, box.scrollHeight);
+      tzoom = Math.max(0.6, Math.min(2.6, Math.round(z * 100) / 100)); save("lv.tzoom", tzoom);
+      var a = box.querySelector(".cifra"); if (a) a.style.fontSize = (17 * tzoom).toFixed(1) + "px";
+      var l = box.querySelector(".lyrics"); if (l) l.style.fontSize = (19 * tzoom).toFixed(1) + "px";
+      box.scrollTop = y * box.scrollHeight;
+      $("zVal").textContent = Math.round(tzoom * 100) + "%";
+      return;
+    }
     zoom = Math.max(0.5, Math.min(4, Math.round(z * 100) / 100));
     $("zVal").textContent = Math.round(zoom * 100) + "%";
     save("lv.zoom", zoom);
-    if (lyricsOn) { lyricZoom(); return; }
     if (!doc) return;
     var rel = anchor || { x: box.clientWidth / 2, y: box.clientHeight / 2 };
     var fx = (box.scrollLeft + rel.x) / Math.max(1, box.scrollWidth), fy = (box.scrollTop + rel.y) / Math.max(1, box.scrollHeight);
@@ -451,18 +728,17 @@
       box.scrollLeft = fx * box.scrollWidth - rel.x;
       box.scrollTop = fy * box.scrollHeight - rel.y;
     });
-    return old;
   }
-  $("zVal").textContent = Math.round(zoom * 100) + "%";
-  $("zIn").addEventListener("click", function () { setZoom(zoom * 1.25); });
-  $("zOut").addEventListener("click", function () { setZoom(zoom / 1.25); });
+  function curZ() { return view === "pdf" ? zoom : tzoom; }
+  $("zIn").addEventListener("click", function () { setZoom(curZ() * (view === "pdf" ? 1.25 : 1.1)); });
+  $("zOut").addEventListener("click", function () { setZoom(curZ() / (view === "pdf" ? 1.25 : 1.1)); });
   $("zVal").addEventListener("click", function () { setZoom(1); });
   (function pinch() {
     var box = $("pages"), start = 0, z0 = 1, mid = null, ratio = 1;
     function dist(t) { var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx * dx + dy * dy); }
     box.addEventListener("touchstart", function (e) {
-      if (e.touches.length === 2 && (doc || lyricsOn)) {
-        start = dist(e.touches); z0 = zoom; ratio = 1;
+      if (e.touches.length === 2 && view) {
+        start = dist(e.touches); z0 = curZ(); ratio = 1;
         var r = box.getBoundingClientRect();
         mid = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top };
       }
@@ -484,15 +760,15 @@
     document.addEventListener("gesturestart", function (e) { if (!$("viewer").hidden) e.preventDefault(); });
   })();
 
+  // ---------- PDF ----------
   var range = [1, 0];
   function loadPdf(id, from, to, jump) {
-    lyricsOn = false;
+    view = "pdf";
     var t = ++token;
     var nr = [from || 1, to || (from ? from : 0)];
     if (doc && docId === id) {
-      modeBtn();
       if (nr[0] !== range[0] || nr[1] !== range[1]) { range = nr; layout(function () { scrollToPage(jump); }); }
-      else scrollToPage(jump);
+      else { layout(function () { scrollToPage(jump); }); }
       return;
     }
     range = nr;
@@ -505,7 +781,7 @@
       })
       .then(function (pdf) {
         if (!pdf || t !== token) return;
-        doc = pdf; docId = id; modeBtn();
+        doc = pdf; docId = id; drawer();
         layout(function () { scrollToPage(jump); });
       })
       .catch(function (err) {
@@ -520,9 +796,9 @@
     var el = p && $("pages").querySelector('.page[data-p="' + p + '"]');
     $("pages").scrollTop = el ? el.offsetTop - 10 : 0;
   }
-
   function layout(after) {
     var t = token, pdf = doc, box = $("pages");
+    if (!pdf) return;
     if (observer) observer.disconnect();
     var avail = Math.min(box.clientWidth - 16, 1000);
     var width = Math.round(avail * zoom);
@@ -541,7 +817,7 @@
       var crops = cropOn && RECORTES[docId];
       for (var i = first; i <= last; i++) {
         var bands = crops && crops[i - 1] && crops[i - 1].length ? crops[i - 1] : [[0, 1]];
-        bands.forEach(function (b, bi) {
+        bands.forEach(function (b) {
           var el = document.createElement("div");
           el.className = "page" + (bands.length > 1 || b[1] - b[0] < 1 ? " strip" : "");
           el.dataset.p = i; el.dataset.b0 = b[0]; el.dataset.b1 = b[1];
@@ -579,12 +855,11 @@
       });
     }
   }
-  var rz; window.addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () { if (doc && !$("viewer").hidden) setZoom(zoom); }, 250); });
-  // indicador de página
+  var rz; window.addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () { if (doc && view === "pdf" && !$("viewer").hidden) setZoom(zoom); }, 250); });
   var indT;
   $("pages").addEventListener("scroll", function () {
     var box = $("pages"), total = +box.dataset.n || 0;
-    if (!doc || total < 2) return;
+    if (view !== "pdf" || !doc || total < 2) return;
     var ps = box.querySelectorAll(".page"), mid = box.scrollTop + box.clientHeight / 3, n = 1, f0 = +box.dataset.first || 1;
     for (var i = 0; i < ps.length; i++) { if (ps[i].offsetTop <= mid) n = +ps[i].dataset.p - f0 + 1; else break; }
     var ind = $("pageInd"); ind.textContent = n + " / " + total; ind.hidden = false; ind.style.opacity = 1;
