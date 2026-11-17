@@ -279,6 +279,12 @@ for fn in os.listdir(f"{OUT}/pdf"):
     if fn[:-4] not in keep: os.remove(f"{OUT}/pdf/{fn}")
 sizes = {fid: os.path.getsize(f"{OUT}/pdf/{fid}.pdf") for fid in keep}
 
+# ---- remove louvores que só têm letra (sem cifra nem partitura) ----
+antes = len(data)
+data = [s_ for s_ in data if not all(x[1].startswith("Letra") for x in s_["d"])]
+print("louvores só com letra removidos:", antes - len(data))
+keep = {x[0] for s_ in data for x in s_["d"] if not x[0].startswith(("L", "C:"))} | {c["id"] for c in cads}
+
 # ---- cifras em texto (acordes + letra, com troca de tom no app) ----
 CIFRAS = {}
 if os.path.exists("cifras.json"):
