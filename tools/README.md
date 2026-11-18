@@ -24,3 +24,5 @@ O `build.py` também troca a versão do `sw.js`; assim os aparelhos baixam a atu
 `crop.py` (usado pelo `build.py`) procura nas grades a linha de cifras e a pauta do coro e grava as faixas de cada página em `window.RECORTES`. No site, o botão **Melodia / Grade** alterna entre o recorte e a página inteira.
 
 `cifra_parse.py` lê as cifras no formato da ICM (acordes em cima, `|` na letra marcando onde entra cada acorde), separa colunas dos cadernos e gera linhas no formato `c:Por[Bb]que ele é o [F]Rei`. No app, a cifra muda de tom pelo menu lateral, e qualquer cifra pode ser colada pelo próprio app ("Colar uma cifra"), ficando salva no aparelho.
+
+Louvores cuja partitura não tem acordes ganham uma "Cifra (sem acordes)" com a letra (oficial dos slides, `letras_por_titulo.json`, ou extraída da partitura por `letra_da_partitura.py`). No app, o menu lateral tem **✎ Adicionar/Editar acordes**: toca-se na palavra e escolhe-se o acorde; as alterações ficam salvas no aparelho (no tom original) e valem para a troca de tom.

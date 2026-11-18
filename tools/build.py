@@ -1,7 +1,7 @@
 """Gera docs/data.js + copia PDFs. Entrada: songs2.json, cadernos.json, pdf/, txt/."""
 import json, re, os, shutil, unicodedata, hashlib, subprocess, collections
 
-# Rode a partir da pasta de trabalho (files.json, songs2.json, cadernos.json, letras_slides.json, cifras.json, s2c.json, pdf/ e txt/).
+# Rode a partir da pasta de trabalho (files.json, songs2.json, cadernos.json, letras_slides.json, cifras.json, s2c.json, lyr_only.json, pdf/ e txt/).
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(TOOLS, "..", "docs")
 
@@ -285,6 +285,17 @@ data = [s_ for s_ in data if not all(x[1].startswith("Letra") for x in s_["d"])]
 print("louvores só com letra removidos:", antes - len(data))
 keep = {x[0] for s_ in data for x in s_["d"] if not x[0].startswith(("L", "C:"))} | {c["id"] for c in cads}
 
+# ---- letras para as cifras sem acordes ----
+def letra_lines(txt):
+    out = []
+    for ln in txt.split("\n"):
+        if not ln.strip(): out.append("") if out and out[-1] != "" else None; continue
+        out.append(("h:" + ln[1:]) if ln.startswith("§") else ("c:" + ln.strip()))
+    while out and out[-1] == "": out.pop()
+    return out
+FUZZY = json.load(open(os.path.join(TOOLS, "letras_por_titulo.json"))) if os.path.exists(os.path.join(TOOLS, "letras_por_titulo.json")) else {}
+LYR = json.load(open("lyr_only.json")) if os.path.exists("lyr_only.json") else {}
+
 # ---- cifras em texto (acordes + letra, com troca de tom no app) ----
 CIFRAS = {}
 if os.path.exists("cifras.json"):
@@ -314,8 +325,32 @@ if os.path.exists("cifras.json"):
                     s_["d"].insert(0, ["C:" + doc[0], "Cifra" if good else "Cifra (revisar)", 0, 0])
                     got = True
                     break
+        # sem acordes na partitura: cifra só com a letra (o usuário adiciona os acordes no app)
+        if not got:
+            lines, src = None, ""
+            lid = next((x[0] for x in s_["d"] if re.match(r"^L\d+$", x[0])), None)
+            if lid:
+                lines, src = letra_lines(LETRAS[int(lid[1:])]), "oficial"
+            elif s_["t"] in FUZZY:
+                k_, i_ = FUZZY[s_["t"]]
+                lines, src = letra_lines(lyric_text(slides[k_][i_])), "oficial"
+            elif any(x[1].startswith("Letra") and x[2] for x in s_["d"]):
+                x = next(x for x in s_["d"] if x[1].startswith("Letra") and x[2])
+                try:
+                    import cifra_parse as _cp
+                    r_ = _cp.caderno_song(f"pdf/{x[0]}.pdf", x[2], x[3] or x[2], s_["t"]) or _cp.page_doc(f"pdf/{x[0]}.pdf", x[2], x[3] or x[2])
+                    ls_ = [("c:" + l[2:]) if l.startswith("t:") else l for l in r_["l" if "l" in r_ else "lines"]]
+                    if sum(1 for l in ls_ if l.startswith("c:")) >= 4: lines, src = ls_, "caderno"
+                except Exception as e:
+                    print("letra caderno falhou", s_["t"], e)
+            if not lines and LYR.get(s_["t"]) and LYR[s_["t"]]["q"] >= 0.75:
+                lines, src = LYR[s_["t"]]["l"], ("partitura" if LYR[s_["t"]]["q"] >= 0.9 else "revisar")
+            if lines:
+                CIFRAS["T:" + s_["d"][0][0]] = {"k": "", "l": lines, "g": 3, "s": src}
+                s_["d"].insert(0, ["C:T:" + s_["d"][0][0], "Cifra (sem acordes)", 0, 0])
+                got = "sem"
         if got:
-            s_["k"] = "cifra"
+            s_["k"] = "cifra" if got is True else s_["k"]
             s_["x"] = s_["x"]  # texto de busca já inclui a cifra
 print("cifras em texto:", len(CIFRAS))
 

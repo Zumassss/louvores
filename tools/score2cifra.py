@@ -59,14 +59,16 @@ def junk(t):
 
 LABELW = re.compile(r"(?i)^(mulheres|homens|vozes|voz|baixo|el[eé]trico|coro|piano|teclado|guitarra|viol[aã]o|bateria|soprano|contralto|tenor|todos|solo|un[ií]s\.?|tutti|cordas|sopros|metais|madeiras|flauta|violino|violoncelo|viola|trompete|trombone|sax|clarinete|fagote|obo[eé]|harpa|orquestra[cç][aã]o|arranjo|arr\.|let\.|m[uú]s\.|letra|m[uú]sica|adapt\.|trad\.|vers[aã]o|revis[aã]o)$")
 GLYPH = re.compile(r"^[ewæœ˙Œ‰Ó∑»«ˆ˘]+™?$|^[a-z]$")
+CREDIT = re.compile(r"(?i)\b(letra|m[uú]sica|arranjo|arr\.|orquestra[cç][aã]o|trans\.|transcri|adapta|adapt\.|trad\.|tradu[cç][aã]o|harmoniza|vers[aã]o|revis[aã]o|composi[cç][aã]o|editora[cç][aã]o|copyright|©)")
 def lyric_row(r, W):
-    body = [w for w in r if w["x0"] > W * 0.08 and not NOISE.match(w["t"])]
+    if CREDIT.search(" ".join(w["t"] for w in r)): return None
+    body = [w for w in r if w["x0"] > W * 0.04 and not NOISE.match(w["t"]) and not LABELW.match(w["t"])]
     syl = [w for w in body if re.search(r"[A-Za-zÀ-ÖØ-öø-ÿ]{2}", w["t"].replace("æ", "").replace("œ", "")) and not CH.match(w["t"])]
     glyphs = [w for w in body if GLYPH.match(w["t"]) or not re.search(r"[A-Za-zÀ-ÿ]", w["t"])]
     hy = [w for w in r if w["t"] in ("-", "–", "_")]
     if len(syl) >= 3 and len(glyphs) <= len(syl) or (len(syl) >= 2 and hy):
         my = mode_y(syl)
-        return [w for w in r if abs(w["y0"] - my) <= 1.2 and w["x0"] > W * 0.08]
+        return [w for w in r if abs(w["y0"] - my) <= 1.2 and w["x0"] > W * 0.04 and not LABELW.match(w["t"])]
     return None
 
 def build_line(row, chords):
@@ -263,6 +265,23 @@ def fix_words(line, vocab):
     while changed:
         changed = False
         words = [(m.start(), m.end()) for m in re.finditer(r"\S+", plain)]
+        # sequências de 3 a 5 sílabas soltas que formam uma palavra ("Se gu ro" -> "Seguro")
+        for i in range(len(words)):
+            for n in (5, 4, 3):
+                if i + n > len(words): continue
+                seg = words[i:i + n]
+                if any(seg[k + 1][0] != seg[k][1] + 1 for k in range(n - 1)): continue
+                parts = [plain[a:b] for a, b in seg]
+                if any(re.search(r"[,.;:!?]$", p) for p in parts[:-1]): continue
+                if nk("".join(parts)) in vocab and sum(1 for p in parts if good(p)) < n:
+                    for k in range(n - 1, 0, -1):
+                        cut = seg[k][0] - 1
+                        plain = plain[:cut] + plain[cut + 1:]
+                        for c in chords:
+                            if c[0] > cut: c[0] -= 1
+                    changed = True; break
+            if changed: break
+        if changed: continue
         for (a0, a1), (b0, b1) in zip(words, words[1:]):
             w1, w2 = plain[a0:a1], plain[b0:b1]
             if b0 == a1 + 1 and not re.search(r"[,.;:!?]$", w1) and nk(w1 + w2) in vocab and (not good(w1) or not good(w2)):
@@ -289,3 +308,37 @@ def fix_words(line, vocab):
     for pos, ch in sorted(chords, key=lambda c: c[0]):
         out += plain[last:pos] + "[" + ch + "]"; last = pos
     return out + plain[last:]
+
+def convert_lyrics(path):
+    """Só a letra (partitura sem acordes): cada grupo de linhas de sílabas vira um sistema sem acordes."""
+    systems = []
+    for W, H, ws in cp.pages_words(path):
+        rows = page_rows(ws, W)
+        allw = [w for r in rows for w in r]
+        ls = []
+        for r in rows:
+            if r[0]["y0"] < H * 0.045 or r[0]["y0"] > H * 0.94: continue
+            if any(LABELW.match(w["t"]) for w in r if w["x0"] > W * 0.15): continue
+            l = lyric_row(r, W)
+            if l:
+                txt = " ".join(w["t"] for w in l)
+                letters = re.sub(r"[^A-Za-zÀ-ÿ]", "", txt)
+                if re.search(r"\b1[5-9]\d\d|20\d\d\b", txt) or (letters and letters.upper() == letters and len(letters) > 8):
+                    continue   # créditos ("PHILIP PAUL BLISS, 1874")
+                ls.append((mode_y([w for w in l if len(w["t"]) > 1] or l), l))
+        # hífens soltos -> linha mais próxima com sílabas dos dois lados
+        inrow = {id(w) for _, l in ls for w in l}
+        for w in allw:
+            if w["t"] in ("-", "–") and id(w) not in inrow:
+                hx = (w["x0"] + w["x1"]) / 2
+                c = [(abs(w["y0"] - y), k) for k, (y, l) in enumerate(ls) if -4 <= w["y0"] - y <= 9
+                     and any(0 <= hx - x["x1"] < 24 for x in l) and any(0 <= x["x0"] - hx < 24 for x in l)]
+                if c: ls[min(c)[1]][1].append(w)
+        for _, l in ls: l.sort(key=lambda w: w["x0"])
+        stack, last = [], None
+        for y, l in ls:
+            if stack and y - last > 22:
+                systems.append(([], stack)); stack = []
+            stack.append(l); last = y
+        if stack: systems.append(([], stack))
+    return systems

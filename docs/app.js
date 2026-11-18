@@ -361,8 +361,12 @@
     stopScroll();
     var di = curDocs[idx];
     $("vSub").textContent = di[1].replace(/ · .*/, "");
-    if (/^C:/.test(di[0])) showCifra(CIFRAS[di[0].slice(2)]);
-    else if (/^M:/.test(di[0])) showCifra(parsePasted(myCifras[d.key]));
+    if (/^C:/.test(di[0])) {
+      var K = di[0].slice(2), base = CIFRAS[K];
+      showCifra(base && edits[K] ? { k: base.k, l: edits[K], g: base.g, ed: 1 } : base, K);
+      subLabel();
+    }
+    else if (/^M:/.test(di[0])) showCifra(parsePasted(myCifras[d.key]), null);
     else if (/^L\d+$/.test(di[0])) showLyrics(+di[0].slice(1));
     else loadPdf(di[0], di[2], di[3]);
     drawer();
@@ -415,13 +419,14 @@
       var m = /\[([A-G](?:#|b)?m?)/.exec(c.l[i]);
       if (m && c.l[i].indexOf("i:") !== 0) return m[1].replace(/m$/, "") + (/^\[[A-G](#|b)?m(?!aj)/.test(c.l[i].slice(m.index)) ? "m" : "");
     }
-    return "C";
+    return "";
   }
 
   // ---------- Cifra (estilo Cifra Club) ----------
   function cifraShift() { return (cur && tons[cur.key]) || 0; }
-  function showCifra(c) {
-    reset(); view = "cifra"; curCifra = c;
+  var edits = load("lv.edits", {}), editing = false, cifraKey = null;
+  function showCifra(c, key) {
+    reset(); view = "cifra"; curCifra = c; cifraKey = key || null; editing = false; editBar();
     if (!c) { $("pages").innerHTML = '<div class="vmsg">Cifra não encontrada.</div>'; return; }
     renderCifra();
     $("pages").scrollTop = 0;
@@ -433,42 +438,47 @@
     var html = "", stanza = [];
     function chordHTML(ch) { return '<b class="ch">' + esc(trChord(ch, shift, flats)) + "</b>"; }
     function flush() { if (stanza.length) { html += '<div class="cs">' + stanza.join("") + "</div>"; stanza = []; } }
-    c.l.forEach(function (line) {
+    var sc = showChords || editing;
+    c.l.forEach(function (line, li) {
       if (!line) { flush(); return; }
       var t = line.slice(0, 2), s = line.slice(2);
       if (t === "h:") { flush(); stanza.push('<div class="ch-h">' + esc(s) + "</div>"); return; }
       if (t === "t:") { stanza.push('<div class="cl">' + (esc(s) || "&nbsp;") + "</div>"); return; }
       if (t === "p:") { stanza.push('<pre class="cp">' + esc(s) + "</pre>"); return; }
       if (t === "i:" || t === "a:") {
-        if (!showChords) return;
+        if (!sc) return;
         stanza.push('<div class="ci">' + s.split(/(\[[^\]]+\])/).map(function (p) {
           return /^\[.+\]$/.test(p) ? chordHTML(p.slice(1, -1)) : esc(p);
         }).join("") + "</div>");
         return;
       }
       // linha cantada: cada palavra é um bloco (acorde em cima, sílaba embaixo)
-      if (!showChords) { stanza.push('<div class="cl">' + esc(s.replace(/\[[^\]]+\]/g, "")) + "</div>"); return; }
-      var parts = s.split(/(\[[^\]]+\])/), out = "", pend = null;
-      function seg(ch, txt) {
-        return '<span class="sg"><b class="ch">' + (ch ? esc(trChord(ch, shift, flats)) : "") + '</b><span class="sy">' + (txt ? esc(txt) : "&nbsp;") + "</span></span>";
+      if (!sc || (!editing && s.indexOf("[") < 0)) { stanza.push('<div class="cl">' + (esc(s.replace(/\[[^\]]+\]/g, "")) || "&nbsp;") + "</div>"); return; }
+      var parts = s.split(/(\[[^\]]+\])/), out = "", pend = null, po = 0, kc = {};
+      function seg(ch, txt, pos) {
+        var k = kc[pos] || 0;
+        if (ch) kc[pos] = k + 1;
+        var at = editing && t === "c:" ? ' data-l="' + li + '" data-o="' + pos + '" data-k="' + k + '"' : "";
+        return '<span class="sg"' + at + '><b class="ch">' + (ch ? esc(trChord(ch, shift, flats)) : "") + '</b><span class="sy">' + (txt ? esc(txt) : "&nbsp;") + "</span></span>";
       }
       function words(txt, ch) {
         var ws = txt.match(/\S+\s*|\s+/g) || [];
-        if (!ws.length && ch) { out += seg(ch, "\u00a0\u00a0"); return; }
-        ws.forEach(function (w, k) { out += seg(k === 0 ? ch : null, w); });
+        if (!ws.length && ch) { out += seg(ch, "\u00a0\u00a0", po); return; }
+        ws.forEach(function (w, k) { out += seg(k === 0 ? ch : null, w, po); po += w.length; });
       }
       for (var i = 0; i < parts.length; i++) {
         var p = parts[i];
         if (/^\[.+\]$/.test(p)) {
-          if (pend !== null) out += seg(pend, "\u00a0\u00a0");
+          if (pend !== null) out += seg(pend, "\u00a0\u00a0", po);
           pend = p.slice(1, -1);
         } else if (p) { words(p, pend); pend = null; }
       }
-      if (pend !== null) out += seg(pend, "\u00a0\u00a0");
+      if (pend !== null) out += seg(pend, "\u00a0\u00a0", po);
+      if (editing && t === "c:") out += seg(null, "\u00a0+\u00a0", po);
       stanza.push('<div class="cl has">' + out + "</div>");
     });
     flush();
-    $("pages").innerHTML = '<article class="cifra" style="font-size:' + (17 * tzoom).toFixed(1) + 'px">' + html + "</article>";
+    $("pages").innerHTML = '<article class="cifra' + (editing ? " editing" : "") + '" style="font-size:' + (17 * tzoom).toFixed(1) + 'px">' + html + "</article>";
     tomUI();
   }
   function setTom(shift) {
@@ -576,6 +586,113 @@
   }
   $("pasteBtn").addEventListener("click", pasteSheet);
 
+
+  // ---------- Editor de acordes ----------
+  function splitLine(s) {
+    var plain = "", chords = [];
+    s.split(/(\[[^\]]+\])/).forEach(function (p) {
+      if (/^\[.+\]$/.test(p)) chords.push([plain.length, p.slice(1, -1)]); else plain += p;
+    });
+    return { plain: plain, chords: chords };
+  }
+  function joinLine(o) {
+    var out = "", last = 0;
+    o.chords.forEach(function (c) { out += o.plain.slice(last, c[0]) + "[" + c[1] + "]"; last = c[0]; });
+    return out + o.plain.slice(last);
+  }
+  function subLabel() {
+    if (view === "cifra" && curCifra && curCifra.g === 3 && curCifra.l.some(function (l) { return l.indexOf("[") >= 0; })) $("vSub").textContent = "Cifra";
+  }
+  function setChordAt(li, pos, k, chord) {
+    var lines = curCifra.l.slice(), line = lines[li];
+    if (!line || line.slice(0, 2) !== "c:") return;
+    var o = splitLine(line.slice(2)), same = o.chords.filter(function (c) { return c[0] === pos; });
+    var others = o.chords.filter(function (c) { return c[0] !== pos; });
+    if (k < same.length) { if (chord) same[k][1] = chord; else same.splice(k, 1); }
+    else if (chord) same.push([pos, chord]);
+    o.chords = others.concat(same).sort(function (a, b) { return a[0] - b[0]; });
+    lines[li] = "c:" + joinLine(o);
+    curCifra = { k: curCifra.k, l: lines, g: curCifra.g, ed: 1 };
+    if (cifraKey) { edits[cifraKey] = lines; save("lv.edits", edits); }
+    var y = $("pages").scrollTop; renderCifra(); $("pages").scrollTop = y; subLabel();
+  }
+  function chordAt(li, pos, k) {
+    var line = curCifra.l[li]; if (!line) return null;
+    var c = splitLine(line.slice(2)).chords.filter(function (c) { return c[0] === pos; })[k];
+    return c ? c[1] : null;
+  }
+  function editBar() {
+    var b = $("editBar");
+    if (!b) {
+      b = document.createElement("div"); b.id = "editBar"; b.className = "editbar";
+      b.innerHTML = '<span>Toque numa palavra para pôr ou trocar o acorde</span><button type="button" id="editDone">Concluir</button>';
+      $("viewer").appendChild(b);
+      $("editDone").addEventListener("click", function () { editing = false; editBar(); renderCifra(); });
+    }
+    b.hidden = !editing;
+  }
+  $("editBtn").addEventListener("click", function () {
+    if (view !== "cifra" || !curCifra || !cifraKey) return;
+    editing = !editing; closeDrawer(); editBar(); stopScroll(); renderCifra();
+  });
+  $("editUndo").addEventListener("click", function () {
+    if (!cifraKey || !edits[cifraKey]) return;
+    if (!confirm("Desfazer todas as suas alterações de acordes nesta cifra?")) return;
+    delete edits[cifraKey]; save("lv.edits", edits);
+    closeDrawer(); open(cur, curIdx);
+  });
+  $("pages").addEventListener("click", function (e) {
+    if (!editing) return;
+    var sg = e.target.closest(".sg[data-l]"); if (!sg) return;
+    chordPicker(+sg.getAttribute("data-l"), +sg.getAttribute("data-o"), +sg.getAttribute("data-k"));
+  });
+  var ROOTS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+  var QUALS = ["", "m", "7", "m7", "maj7", "sus4", "4", "9", "6", "dim", "º", "7(9)", "m7(b5)", "add9"];
+  function chordPicker(li, pos, k) {
+    var ok = keyInfo(origKey(curCifra)), shift = ok ? cifraShift() : 0;
+    var flats = ok ? useFlats(ok.i + shift, ok.minor) : false;
+    var curCh = chordAt(li, pos, k), shown = curCh ? trChord(curCh, shift, flats) : "";
+    var m = /^([A-G](?:#|b)?)([^/]*)(?:\/([A-G](?:#|b)?))?$/.exec(shown) || [];
+    var st = { r: m[1] || "", q: m[2] || "", b: m[3] || "" };
+    var used = {};
+    curCifra.l.forEach(function (l) { (l.match(/\[([^\]]+)\]/g) || []).forEach(function (x) { used[trChord(x.slice(1, -1), shift, flats)] = 1; }); });
+    var bg = document.createElement("div"); bg.className = "sheet-bg";
+    var word = (splitLine(curCifra.l[li].slice(2)).plain.slice(pos).match(/^\S*/) || [""])[0] || "fim da linha";
+    bg.innerHTML = '<div class="sheet picker" role="dialog" aria-label="Escolher acorde"><h2>Acorde em “' + esc(word) + '”</h2>' +
+      '<div class="pv"><input id="pkIn" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" value="' + esc(shown) + '" placeholder="ex.: G, Em7, D/F#"></div>' +
+      (Object.keys(used).length ? '<div class="dlab">Desta música</div><div class="pk used">' + Object.keys(used).map(function (c) { return '<button type="button" data-c="' + esc(c) + '">' + esc(c) + "</button>"; }).join("") + "</div>" : "") +
+      '<div class="dlab">Nota</div><div class="pk roots">' + ROOTS.map(function (r) { return '<button type="button" data-r="' + r + '">' + r + "</button>"; }).join("") + "</div>" +
+      '<div class="dlab">Tipo</div><div class="pk quals">' + QUALS.map(function (q) { return '<button type="button" data-q="' + q + '">' + (q || "maior") + "</button>"; }).join("") + "</div>" +
+      '<div class="dlab">Baixo</div><div class="pk bass"><button type="button" data-b="">—</button>' + ROOTS.map(function (r) { return '<button type="button" data-b="' + r + '">/' + r + "</button>"; }).join("") + "</div>" +
+      '<div class="act"><button class="btn ghost" data-a="del">Tirar</button><button class="btn ghost" data-a="x">Cancelar</button><button class="btn" data-a="ok">Pôr acorde</button></div></div>';
+    document.body.appendChild(bg);
+    var inp = bg.querySelector("#pkIn");
+    function sync() {
+      inp.value = st.r ? st.r + st.q + (st.b ? "/" + st.b : "") : inp.value;
+      bg.querySelectorAll("[data-r]").forEach(function (x) { x.classList.toggle("on", x.getAttribute("data-r") === st.r); });
+      bg.querySelectorAll("[data-q]").forEach(function (x) { x.classList.toggle("on", x.getAttribute("data-q") === st.q); });
+      bg.querySelectorAll("[data-b]").forEach(function (x) { x.classList.toggle("on", x.getAttribute("data-b") === st.b); });
+    }
+    sync();
+    bg.addEventListener("click", function (e) {
+      var t = e.target, a = t.getAttribute("data-a");
+      if (t === bg || a === "x") { bg.remove(); return; }
+      if (t.hasAttribute("data-c")) { inp.value = t.getAttribute("data-c"); st = { r: "", q: "", b: "" }; bg.querySelectorAll(".on").forEach(function (x) { x.classList.remove("on"); }); return; }
+      if (t.hasAttribute("data-r")) { st.r = t.getAttribute("data-r"); sync(); return; }
+      if (t.hasAttribute("data-q")) { st.q = t.getAttribute("data-q"); if (!st.r) st.r = "C"; sync(); return; }
+      if (t.hasAttribute("data-b")) { st.b = t.getAttribute("data-b"); if (!st.r) st.r = "C"; sync(); return; }
+      if (a === "del") { setChordAt(li, pos, k, null); bg.remove(); return; }
+      if (a === "ok") {
+        var v = inp.value.trim().replace(/\s+/g, "");
+        if (!v) { setChordAt(li, pos, k, null); bg.remove(); return; }
+        if (!CHORD_RE.test(v)) { inp.focus(); inp.classList.add("bad"); return; }
+        setChordAt(li, pos, k, trChord(v, -shift, ok ? useFlats(ok.i, ok.minor) : false));   // guarda no tom original
+        bg.remove();
+      }
+    });
+    inp.addEventListener("input", function () { inp.classList.remove("bad"); });
+  }
+
   // ---------- Letra em texto ----------
   function showLyrics(n) {
     reset(); view = "letra";
@@ -594,13 +711,23 @@
     var d = cur;
     $("dNum").textContent = d && d.n ? d.n : "";
     $("dTitle").textContent = d ? d.t : $("vName").textContent;
-    $("dCol").textContent = (d ? d.cs : "Caderno") + (view === "cifra" && curCifra && curCifra.g ? (curCifra.g === 2 ? " · cifra montada da partitura — confira, pode ter palavras quebradas" : " · cifra montada a partir da partitura") : "");
+    var note = "";
+    if (view === "cifra" && curCifra) {
+      if (curCifra.g === 3) note = curCifra.ed ? " · acordes colocados por você" : " · a partitura não tem acordes — use “Adicionar acordes”";
+      else if (curCifra.g === 2) note = " · cifra montada da partitura — confira, pode ter palavras quebradas";
+      else if (curCifra.g === 1) note = " · cifra montada a partir da partitura";
+      if (curCifra.ed && curCifra.g !== 3) note += " · com suas alterações";
+    }
+    $("dCol").textContent = (d ? d.cs : "Caderno") + note;
     $("dDocs").innerHTML = curDocs.map(function (x, i) {
       var ic = /^(C:|M:)/.test(x[0]) ? "♪" : /^L\d/.test(x[0]) ? "¶" : "▤";
       return '<button type="button" role="tab" data-i="' + i + '" aria-selected="' + (i === curIdx) + '"><span class="di">' + ic + "</span>" + esc(x[1]) + "</button>";
     }).join("");
     $("secDocs").hidden = curDocs.length < 2;
-    $("secTom").hidden = view !== "cifra";
+    $("secTom").hidden = view !== "cifra" || !curCifra || !keyInfo(origKey(curCifra));
+    $("secEdit").hidden = !(view === "cifra" && cifraKey);
+    $("editBtn").textContent = editing ? "✓ Concluir edição" : (curCifra && curCifra.g === 3 && !curCifra.ed ? "✎ Adicionar acordes" : "✎ Editar acordes");
+    $("editUndo").hidden = !(cifraKey && edits[cifraKey]);
     $("secChords").hidden = view !== "cifra";
     $("optChords").checked = showChords;
     $("secMode").hidden = !(view === "pdf" && docId && RECORTES[docId]);
