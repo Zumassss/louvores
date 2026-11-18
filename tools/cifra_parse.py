@@ -12,7 +12,7 @@ import re, subprocess, html, json, sys, unicodedata
 
 WORD = re.compile(r'<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)</word>')
 PAGE = re.compile(r'<page width="([\d.]+)" height="([\d.]+)">(.*?)</page>', re.S)
-CH = r"[A-G](?:#|b)?(?:maj|min|m|M|dim|aug|sus|add|º|°|ø|\+)?[0-9]*(?:\([^)\s]{1,12}\))?(?:maj|sus|add|m)?[0-9]*(?:/[A-G](?:#|b)?)?"
+CH = r"[A-G](?:#|b)?(?:maj|min|m|M|dim|aug|sus|add|º|°|ø|Ø|\+)?[0-9]*(?:b5|#5)?(?:\([^)\s]{1,12}\))?(?:maj|sus|add|m)?[0-9]*(?:\([^)\s]{1,12}\))?(?:/[A-G](?:#|b)?)?"
 CHORD = re.compile(r"^" + CH + r"$")
 SEP = re.compile(r"^(\||\|\||%|-|–|\(?\d+x\)?|x\d+|\(bis\)|bis)$", re.I)
 
@@ -78,6 +78,18 @@ def glue(ws):
     out = []
     for w in sorted(ws, key=lambda w: (round(w["y0"] / 8), w["x0"])):
         out.append(dict(w))
+    # acordes com parênteses quebrados em pedaços: "F9" "(" "#11" ")" -> "F9(#11)"
+    CHORDISH = re.compile(r"^[A-G](#|b)?[0-9mMajsudi+º°()#b/A-G]*$")
+    FRAG = re.compile(r"^[()#b0-9+º°Øø]+$|^\(?(sus|add|maj|dim|aug)[0-9]*\)?$|^/[A-G](#|b)?$|^[0-9]*\([^ ]*$|^\)(/[A-G](#|b)?)?$")
+    rows = sorted(out, key=lambda w: w["x0"])
+    for i, a in enumerate(rows):
+        if a.get("del") or not CHORDISH.match(a["t"]): continue
+        for b in rows[i + 1:]:
+            if b.get("del") or abs(b["y0"] - a["y0"]) > 3.5: continue
+            if not (-0.5 <= b["x0"] - a["x1"] < 4.6): continue
+            gap = b["x0"] - a["x1"]
+            if FRAG.match(b["t"]) and (gap < 1.2 or (gap < 4.6 and (a["t"].count("(") > a["t"].count(")") or b["t"][0] in "(/Øø" or re.match(r"^[0-9]", b["t"]) and len(a["t"]) <= 2))):
+                a["t"] += b["t"]; a["x1"] = b["x1"]; b["del"] = True
     changed = True
     while changed:
         changed = False
@@ -101,7 +113,10 @@ def lines_of(ws):
 def is_chord_line(l):
     toks = [w["t"] for w in l]
     ch = [t for t in toks if CHORD.match(t)]
-    return bool(ch) and all(CHORD.match(t) or SEP.match(t) for t in toks)
+    if not ch: return False
+    other = [t for t in toks if not (CHORD.match(t) or SEP.match(t))]
+    # tolera erro de digitação curto ("BB") se quase tudo for acorde
+    return not other or (len(ch) >= 2 * len(other) and all((len(t) <= 3 or re.match(r"^[A-G](#|b)?[^ ]{0,9}$", t)) and not re.search(r"[aeiouáéíóú]{1}[a-z]", t) for t in other))
 
 def build_lyric(l):
     """Texto da linha + posição x de cada caractere."""
@@ -115,6 +130,42 @@ def build_lyric(l):
         t = w["t"]; step = (w["x1"] - w["x0"]) / max(1, len(t))
         text += t; xs += [w["x0"] + step * k for k in range(len(t))]
     return text, xs
+
+VOW = set("aeiouáéíóúâêôãõàüyAEIOUÁÉÍÓÚÂÊÔÃÕÀÜY")
+def syllable_starts(word):
+    """Começos de sílaba numa palavra (regras simples do português)."""
+    w = word.lower(); n = len(w); starts = [0]
+    i = 0
+    letters = [c.isalpha() for c in w]
+    while i < n:
+        if w[i] in VOW:
+            j = i + 1
+            while j < n and w[j] in VOW and not (w[j - 1] in "aeo" and w[j] in "aeo"):  # ditongos ficam juntos; hiato "oe/ea" separa
+                j += 1
+            k = j
+            while k < n and letters[k] and w[k] not in VOW: k += 1
+            cons = w[j:k]
+            if k >= n or not cons:
+                if k < n and not cons and j < n and w[j] in VOW: starts.append(j)
+                i = k; continue
+            if len(cons) == 1: b = j
+            elif cons[-2:] in ("nh", "lh", "ch", "qu", "gu") or cons[-2:] in ("br", "cr", "dr", "fr", "gr", "pr", "tr", "vr", "bl", "cl", "fl", "gl", "pl", "tl"):
+                b = k - 2
+            else: b = k - 1
+            if 0 < b < n and letters[b]: starts.append(b)
+            i = k
+        else:
+            i += 1
+    return sorted(set(starts))
+
+def snap_syllable(text, pos):
+    if pos >= len(text) or not text[pos].isalpha(): return pos
+    a = pos
+    while a > 0 and text[a - 1].isalpha(): a -= 1
+    b = pos
+    while b < len(text) and text[b].isalpha(): b += 1
+    cands = [a + x for x in syllable_starts(text[a:b])]
+    return min(cands, key=lambda c: (abs(c - pos), c > pos))
 
 def merge(chords, lyric_words):
     """Coloca cada acorde no lugar certo da letra."""
@@ -143,13 +194,10 @@ def merge(chords, lyric_words):
             if near:
                 pos = min(near, key=lambda p: abs(p - pos)); used.add(pos)
             elif pos < len(clean_xs):
-                # encaixa no começo da palavra se estiver a 1-2 letras dele
+                # sem '|': encaixa no começo da sílaba mais próxima (Se·nhor, In·vo·cai)
                 cl = text.replace("|", "")
-                for back in (1, 2):
-                    j = pos - back
-                    if j >= 0 and (j == 0 or cl[j - 1] == " ") and cl[j:pos].strip() == cl[j:pos] and " " not in cl[j:pos]:
-                        pos = j; break
                 if pos < len(cl) and cl[pos] == " ": pos += 1
+                pos = snap_syllable(cl, pos)
             ins.append((pos, c["t"]))
     clean = text.replace("|", "")
     # se a letra começa com espaços demais por causa do recuo, mantém só os acordes nas posições

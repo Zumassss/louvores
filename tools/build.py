@@ -296,6 +296,63 @@ def letra_lines(txt):
 FUZZY = json.load(open(os.path.join(TOOLS, "letras_por_titulo.json"))) if os.path.exists(os.path.join(TOOLS, "letras_por_titulo.json")) else {}
 LYR = json.load(open("lyr_only.json")) if os.path.exists("lyr_only.json") else {}
 
+# ---- coletâneas cifradas novas (pasta CLAUDE do Drive) ----
+import difflib as _dl
+NEWSRC = []   # (fonte, coleção esperada, número, título, tom, linhas)
+def _add_new(path, src, colfn):
+    if not os.path.exists(path): return
+    for x in json.load(open(path)):
+        if x.get("nc", 0) < 3: continue
+        col, num = colfn(x)
+        NEWSRC.append({"src": src, "col": col, "num": num, "title": x["title"], "k": x.get("key", ""), "l": x["lines"]})
+_add_new(os.path.join(TOOLS, "coletaneas", "cifras2025.json"), "Coletânea Cifras 2025", lambda x: (None, None))
+_add_new(os.path.join(TOOLS, "coletaneas", "cias2024.json"), "Coletânea CIAs 2024",
+         lambda x: ("Coletânea CIAs", "CIA " + x["num"].zfill(3)) if x["page"] < 192 else ("Avulsos CIAs", None))
+_add_new(os.path.join(TOOLS, "coletaneas", "nivel2.json"), "Coletânea Cifrada Nível II", lambda x: ("Coletânea", x["num"].zfill(3)))
+def _numkey(n):
+    m = re.match(r"^(CIA\s*)?([A-Z]?)0*(\d+)$", n or "")
+    return ((m.group(1) and "cia") or m.group(2).lower(), int(m.group(3))) if m else None
+_by_num = collections.defaultdict(list)
+for s_ in data:
+    for n in [s_["n"]] + list(s_.get("m", [])):
+        k = _numkey(n)
+        if k: _by_num[k].append(s_)
+_by_title = collections.defaultdict(list)
+for s_ in data: _by_title[tkey(s_["t"])].append(s_)
+NEW_MATCH, NEW_NEW = 0, 0
+for x in NEWSRC:
+    target = None
+    if x["num"]:
+        cands = [s_ for s_ in _by_num.get(_numkey(x["num"]), []) if s_["c"] == x["col"] or x["col"] == "Coletânea"]
+        # confere o título (a numeração pode mudar entre edições)
+        for s_ in cands:
+            r = _dl.SequenceMatcher(None, tkey(s_["t"]), tkey(sentence(x["title"]))).ratio()
+            if r >= 0.6: target = s_; break
+    if target is None:
+        c2 = _by_title.get(tkey(sentence(x["title"])), [])
+        if c2: target = c2[0]
+    if target is None:   # um título é o começo do outro (título cortado ou com subtítulo)
+        k0 = tkey(sentence(x["title"]))
+        if len(k0.split()) >= 3:
+            pref = [lst[0] for k_, lst in _by_title.items() if (k_.startswith(k0 + " ") or k0.startswith(k_ + " ")) and len(k_.split()) >= 3]
+            if pref: target = pref[0]
+    if target is None:
+        best, br = None, 0
+        k0 = tkey(sentence(x["title"]))
+        for k_, lst in _by_title.items():
+            r = _dl.SequenceMatcher(None, k_, k0).ratio()
+            if r > br: best, br = lst[0], r
+        if br >= 0.9: target = best
+    if target is not None:
+        if "_new" not in target: target["_new"] = x; NEW_MATCH += 1
+        continue
+    # louvor que ainda não existe no site
+    col = x["col"] or "Cifras 2025"
+    num = x["num"] or ""
+    s_ = {"n": num, "m": [], "t": sentence(x["title"]).replace(" ,", ","), "c": col, "g": "", "a": [], "k": "cifra", "d": [], "x": "", "_new": x}
+    data.append(s_); _by_title[tkey(s_["t"])].append(s_); NEW_NEW += 1
+print("coletâneas novas:", len(NEWSRC), "cifras;", NEW_MATCH, "em louvores existentes;", NEW_NEW, "louvores novos")
+
 # ---- cifras em texto (acordes + letra, com troca de tom no app) ----
 CIFRAS = {}
 if os.path.exists("cifras.json"):
@@ -311,6 +368,13 @@ if os.path.exists("cifras.json"):
                 got = True
             if key in allc:
                 doc[1] = doc[1].replace("Cifra", "Cifra (PDF)", 1).replace("Harmonia", "Harmonia (PDF)", 1)
+        # cifra das coletâneas cifradas novas
+        if not got and s_.get("_new"):
+            x = s_["_new"]; kk = "N:" + str(abs(hash(x["src"] + x["title"] + str(x["num"]))) % 10**10)
+            CIFRAS[kk] = {"k": x["k"], "l": x["l"], "src": x["src"]}
+            s_["d"].insert(0, ["C:" + kk, "Cifra", 0, 0])
+            if not s_["x"]: s_["x"] = lyrics("\n".join(re.sub(r"\[[^\]]*\]", "", l[2:]) for l in x["l"] if l[:2] in ("c:", "t:")))[:5000]
+            got = True
         # cifra gerada a partir da partitura (acordes da partitura sobre as sílabas)
         if not got and os.path.exists("s2c.json"):
             if "_s2c" not in globals():
