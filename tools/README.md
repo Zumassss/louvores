@@ -32,3 +32,12 @@ Louvores cuja partitura não tem acordes ganham uma "Cifra (sem acordes)" com a 
 - `coletanea_split.py`: separa uma coletânea em PDF com texto (Cifras 2025, CIAS 2024) em louvores e converte cada um.
 - Coletânea Cifrada Nível II (escaneada): `scan_build.py` lê cada página (acordes em vermelho com `|` vermelho marcando a sílaba; letra em preto, via Tesseract), e `nivel2_assemble.py` monta as cifras, corrige # e b pelo tom da música e a letra pela letra oficial.
 - Os resultados ficam em `coletaneas/*.json` e são lidos pelo `build.py`.
+
+## Leitor de acordes da Coletânea Cifrada Nível II (escaneada)
+
+1. `tokens_extract.py` / `tokens_head.py`: recorta cada acorde vermelho das 450 páginas.
+2. `tokens_vote.py` / `tokens_knn.py` / `tokens_fix.py`: agrupa desenhos iguais e corrige o OCR pela maioria.
+3. `synth_vocab.py` + `synth_score.py` + `synth_rerank.py`: desenha todos os acordes possíveis na mesma fonte e compara com o recorte.
+4. `slot_cls.py`: confere a letra do acorde e o símbolo seguinte (#, b, m, 7, /) com exemplos reais do livro.
+5. `final_read.py` + `postfix.py`: leitura final; º/ø/6/9/2 depois de #/b pelos exemplos conferidos à mão (`seeds_sfx.json`).
+6. `apply_reads.py`: aplica no OCR das linhas e põe os acordes sem '|' sobre a palavra certa; `nivel2_assemble.py` monta as cifras.

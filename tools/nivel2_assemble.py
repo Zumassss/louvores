@@ -9,9 +9,9 @@ import score2cifra as sc
 
 HEAD = re.compile(r"^\s*(\d{1,3})\s*[-–—.]+\s*([A-ZÀ-Ý0-9][^a-zà-ÿ]{2,})$")
 META = re.compile(r"(?i)^\(?\s*(let|letra|m[uú]s|arr|trad|vers)|tonalidade|ritmo|\(\s*let|/\s*m[uú]s")
-LABEL = re.compile(r"(?i)^(coro|instrumentos?|instrumental|repetir.*|bis|final|ponte|solo|interl[uú]dio|todos|varões|varoas|vozes.*|\d+\s*x)\s*:?$")
-INLINE = re.compile(r"(?i)^(introdu[cç][aã]o|final|instrumental|interl[uú]dio|solo|ponte)\s*:")
-CH = re.compile(r"^[A-G](#|b)?(maj|m|M|dim|aug|sus|add|º|ø|\+)?[0-9]*(\([^)\s]{1,10}\))?(maj|sus|add|m)?[0-9]*(/[A-G](#|b)?)?$")
+LABEL = re.compile(r"(?i)^(coro|instrumentos?|instrumental|repetir.*|bis|final|ponte|solo|interl[uú]dio|todos|varões|varoas|vozes.*|\d+\s*x)(\s+(\d+\s*x|final|no\s.{0,20}))?\s*(\([^)]*\))?\s*:?$")
+INLINE = re.compile(r"(?i)^(introdu[cç][aã]o|final|instrumentos?|instrumental|interl[uú]dio|solo|ponte)\s*:")
+CH = re.compile(r"^" + cp.CH + r"$")
 
 def nk(w):
     w = unicodedata.normalize("NFD", w.lower())
@@ -59,6 +59,8 @@ def scale_names(key):
     return names
 
 def norm_chord(t):
+    if t.startswith("!"):
+        n = norm_chord(t[1:]); return ("!" + n) if n else None
     t = t.replace("bb", "b")
     t = re.sub(r"^([A-G][#b]?)([A-G][#b]?)$", r"\1/\2", t)                 # AG -> A/G
     t = re.sub(r"^([A-G][#b]?m?\d*)[il1|I]([A-G][#b]?)$", r"\1/\2", t)       # DiF -> D/F
@@ -141,12 +143,14 @@ def clean_chords(lines, key=""):
     def fixc(c):
         c = norm_chord(c)
         if not c: return None
+        if c.startswith("!"): return c          # conferido no desenho: não mexe
         return key_fix(c, sc_names)
     stage = [re.sub(r"\[([^\]]+)\]", lambda m: "[" + (fixc(m.group(1)) or "") + "]", l).replace("[]", "") for l in lines]
     allc = [c for l in stage for c in re.findall(r"\[([^\]]+)\]", l)]
     cnt = collections.Counter(allc)
     def fix6(m):
         c = m.group(1)
+        if c.startswith("!"): return "[" + c[1:] + "]"
         mm = re.match(r"^([A-G])6(.*)$", c)
         if mm and cnt.get(mm.group(1) + "b" + mm.group(2), 0) >= 1: c = mm.group(1) + "b" + mm.group(2)
         return "[" + c + "]"
@@ -179,6 +183,11 @@ def assemble(items):
         ch_inline = [c for _, c in it["inline"]]
         if it["words"] and INLINE.match(txt):
             lab = INLINE.match(txt).group(1).capitalize()
+            rest = [w for w in it["words"] if not INLINE.match(w[0] + ":") and not re.match(r"(?i)^(introdu|final|instrument)", w[0])]
+            if it["chords"] and rest:      # "Final: |Para tua |glória..." -> título + verso com acordes
+                cur["lines"].append("h:" + lab)
+                cur["lines"].append("c:" + sb.lyric_with_chords(dict(it, words=rest)))
+                continue
             if ch_inline: cur["lines"].append("i:" + lab + ": " + " ".join("[" + c + "]" for c in ch_inline))
             else: cur["lines"].append("h:" + txt.rstrip(":"))
             continue
@@ -200,6 +209,8 @@ def assemble(items):
         if LABEL.match(txt):
             if re.match(r"(?i)^bis$", txt): continue
             cur["lines"].append("h:" + txt.rstrip(":")); continue
+        if txt.startswith("(") and not it["chords"] and it["inline"]:     # "(D para repetir)"
+            cur["lines"].append("i:" + sb.lyric_with_chords(dict(it, chords=it["inline"]))); continue
         line = sb.lyric_with_chords(it)
         tail = it.get("tail", []) + [c for _, c in it["inline"]]
         if tail: line += "".join("[" + c + "]" for c in tail)
@@ -334,7 +345,7 @@ if __name__ == "__main__":
         head = " ".join(s["head"])
         km = re.search(r"(?i)tonalidade:?\s*([A-G](?:#|b|♯|♭)?\s?m?)", head.replace("Dim", "Dm").replace("Em ", "Em"))
         key = km.group(1).replace(" ", "").replace("♯", "#").replace("♭", "b") if km else ""
-        raw = [norm_chord(c) for l in s["lines"] for c in re.findall(r"\[([^\]]+)\]", l)]
+        raw = [(norm_chord(c) or "").lstrip("!") for l in s["lines"] for c in re.findall(r"\[([^\]]+)\]", l)]
         key = best_key([c for c in raw if c], key)
         lines = clean_chords(s["lines"], key)
         if not key: key = cp.detect_key(lines, "")
