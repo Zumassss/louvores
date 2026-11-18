@@ -179,34 +179,60 @@ def convert(path):
 
 def to_cifra(systems):
     lines, n_ch, n_syl = [], 0, 0
-    blocks = []  # agrupa sistemas seguidos com o mesmo número de estrofes
+    blocks = []  # agrupa sistemas seguidos com o mesmo número de estrofes (instrumentais seguidos viram um só)
     for chords, verses in systems:
         k = len(verses)
-        if blocks and blocks[-1][0] == k and k > 0: blocks[-1][1].append((chords, verses))
+        if blocks and blocks[-1][0] == k: blocks[-1][1].append((chords, verses))
         else: blocks.append([k, [(chords, verses)]])
-    first = True
-    for k, sysl in blocks:
+    stat = {"ch": 0, "syl": 0}
+
+    def sing(sysl, v, count):
+        out, carry = [], ""
+        for chords, verses in sysl:
+            r = build_line(verses[v], chords)
+            if not r: continue
+            txt = carry + r[0]; carry = ""
+            if r[3]:   # termina no meio de uma palavra ("trans-"): o pedaço vai para a próxima linha
+                cut = txt.rfind(" ")
+                if cut > 0: carry, txt = txt[cut + 1:], txt[:cut]
+            out.append("c:" + txt)
+            if count: stat["ch"] += r[1]
+            stat["syl"] += r[2]
+        if carry: out.append("c:" + carry)
+        return out
+
+    def instr(sysl, label):
+        chs = [c["t"] for chords, _ in sysl for c in chords]
+        return ["i:" + label + ": " + " ".join("[" + c + "]" for c in chs)] if chs else []
+
+    # ordem de execução: estrofe 1 + coro + instrumental, estrofe 2 + coro + instrumental, ...
+    has_lyrics_after = [any(k > 0 for k, _ in blocks[i + 1:]) for i in range(len(blocks))]
+    seen_lyrics, i = False, 0
+    while i < len(blocks):
+        k, sysl = blocks[i]
         if k == 0:
-            chs = [c["t"] for chords, _ in sysl for c in chords]
-            lab = "Introdução" if first else "Instrumental"
-            if lines and lines[-1] != "": lines.append("")
-            lines.append("i:" + lab + ": " + " ".join("[" + c + "]" for c in chs))
-            lines.append("")
-            first = False
-            continue
-        first = False
+            lab = "Introdução" if not seen_lyrics else ("Instrumental" if has_lyrics_after[i] else "Final")
+            lines += [""] + instr(sysl, lab) + [""]
+            i += 1; continue
+        if k == 1:
+            lines += sing(sysl, 0, True) + [""]
+            seen_lyrics = True; i += 1; continue
+        # bloco com várias estrofes: o que vem depois (coro/instrumental) até a próxima estrofe se repete
+        tail, j = [], i + 1
+        while j < len(blocks) and blocks[j][0] <= 1:
+            tail.append(blocks[j]); j += 1
+        last_tail_has_lyrics = any(tk == 1 for tk, _ in tail)
         for v in range(k):
-            carry = ""
-            for chords, verses in sysl:
-                r = build_line(verses[v], chords)
-                if not r: continue
-                txt = carry + r[0]; carry = ""
-                if r[3]:   # termina no meio de uma palavra ("trans-"): o pedaço vai para a próxima linha
-                    cut = txt.rfind(" ")
-                    if cut > 0: carry, txt = txt[cut + 1:], txt[:cut]
-                lines.append("c:" + txt); n_ch += r[1] if v == 0 else 0; n_syl += r[2]
-            if carry: lines.append("c:" + carry)
-            lines.append("")
+            lines += sing(sysl, v, v == 0) + [""]
+            for ti, (tk, tsys) in enumerate(tail):
+                if tk == 1:
+                    lines += (["h:Coro"] if v == 0 or True else []) + sing(tsys, 0, v == 0) + [""]
+                else:
+                    later = (v < k - 1) or (j < len(blocks)) or any(x[0] == 1 for x in tail[ti + 1:])
+                    lines += instr(tsys, "Instrumental" if later else "Final") + [""]
+        seen_lyrics = True
+        i = j
+    n_ch, n_syl = stat["ch"], stat["syl"]
     # muitos acordes seguidos antes de uma única palavra (anacruse): vira linha de introdução
     fixed = []
     for i, x in enumerate(lines):
@@ -229,6 +255,16 @@ def to_cifra(systems):
         if nxt is None: continue
         lines[i] = lines[i][:m.start(2)].rstrip()
         lines[nxt] = "c:" + m.group(2) + " " + lines[nxt][2:]
+    merged = []
+    for x in lines:
+        if x.startswith("i:"):
+            prev = next((m for m in reversed(merged) if m != ""), None)
+            if prev is not None and prev.startswith("i:"):
+                idx = len(merged) - 1 - [m for m in reversed(merged)].index(prev)
+                merged[idx] = prev + " " + " ".join(re.findall(r"\[[^\]]+\]", x))
+                continue
+        merged.append(x)
+    lines = merged
     while lines and lines[-1] == "": lines.pop()
     clean = []
     for x in lines:

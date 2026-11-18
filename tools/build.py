@@ -281,8 +281,8 @@ sizes = {fid: os.path.getsize(f"{OUT}/pdf/{fid}.pdf") for fid in keep}
 
 # ---- remove louvores que só têm letra (sem cifra nem partitura) ----
 antes = len(data)
-data = [s_ for s_ in data if not all(x[1].startswith("Letra") for x in s_["d"])]
-print("louvores só com letra removidos:", antes - len(data))
+# (louvores só com letra agora ficam: viram "Cifra (sem acordes)" com a letra oficial)
+print("louvores só com letra (mantidos como cifra sem acordes):", sum(1 for s_ in data if all(x[1].startswith("Letra") for x in s_["d"])))
 keep = {x[0] for s_ in data for x in s_["d"] if not x[0].startswith(("L", "C:"))} | {c["id"] for c in cads}
 
 # ---- letras para as cifras sem acordes ----
