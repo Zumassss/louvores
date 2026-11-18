@@ -98,8 +98,14 @@ def lyric_with_chords(it):
 if __name__ == "__main__":
     pdf, a, b, outp = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
     tmp = os.path.join(os.path.dirname(outp) or ".", "img"); os.makedirs(tmp, exist_ok=True)
+    done = set()
+    if os.path.exists(outp):
+        for line in open(outp):
+            try: done.add(json.loads(line)["page"])
+            except Exception: pass
     with open(outp, "a") as f:
         for pg in range(a, b + 1):
+            if pg in done: continue
             try:
                 r = process_page(pdf, pg, tmp)
             except Exception as e:

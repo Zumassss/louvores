@@ -26,3 +26,9 @@ O `build.py` também troca a versão do `sw.js`; assim os aparelhos baixam a atu
 `cifra_parse.py` lê as cifras no formato da ICM (acordes em cima, `|` na letra marcando onde entra cada acorde), separa colunas dos cadernos e gera linhas no formato `c:Por[Bb]que ele é o [F]Rei`. No app, a cifra muda de tom pelo menu lateral, e qualquer cifra pode ser colada pelo próprio app ("Colar uma cifra"), ficando salva no aparelho.
 
 Louvores cuja partitura não tem acordes ganham uma "Cifra (sem acordes)" com a letra (oficial dos slides, `letras_por_titulo.json`, ou extraída da partitura por `letra_da_partitura.py`). No app, o menu lateral tem **✎ Adicionar/Editar acordes**: toca-se na palavra e escolhe-se o acorde; as alterações ficam salvas no aparelho (no tom original) e valem para a troca de tom.
+
+## Coletâneas cifradas (pasta CLAUDE do Drive)
+
+- `coletanea_split.py`: separa uma coletânea em PDF com texto (Cifras 2025, CIAS 2024) em louvores e converte cada um.
+- Coletânea Cifrada Nível II (escaneada): `scan_build.py` lê cada página (acordes em vermelho com `|` vermelho marcando a sílaba; letra em preto, via Tesseract), e `nivel2_assemble.py` monta as cifras, corrige # e b pelo tom da música e a letra pela letra oficial.
+- Os resultados ficam em `coletaneas/*.json` e são lidos pelo `build.py`.

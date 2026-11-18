@@ -16,7 +16,7 @@ def tess_token(img, tmp, psm=7):
 
 def tess_best(img, tmp, single=False):
     """Tenta alguns modos do Tesseract e fica com a primeira leitura que pareça acorde/pedaço válido."""
-    tries = (10, 8, 7) if single else (7, 8, 13)
+    tries = (10, 7) if single else (7,)
     first = ""
     for psm in tries:
         t = tess_token(img, tmp, psm)
@@ -25,7 +25,8 @@ def tess_best(img, tmp, single=False):
     return first
 
 def read_chord(mask, box, tmp):
-    """Lê um acorde. Partes pequenas e altas (expoente: 7, b, #, sus4) são lidas à parte."""
+    """Lê um acorde. Partes pequenas e altas (expoente: 7, #, b, sus4) são lidas à parte e
+    encaixadas logo depois da nota que está à esquerda delas (antes ou depois da '/')."""
     y0, y1, x0, x1 = box
     sub = mask[y0:y1, x0:x1]
     lab, n = ndimage.label(sub)
@@ -34,11 +35,12 @@ def read_chord(mask, box, tmp):
     hs = [o[0].stop - o[0].start for o in objs]
     big = max(hs)
     base_bottom = max(o[0].stop for o, h in zip(objs, hs) if h >= big * 0.75)
-    main = np.zeros_like(sub); sup = np.zeros_like(sub)
+    main_ids, sup_ids = [], []
     for i, (o, h) in enumerate(zip(objs, hs), start=1):
         small_high = h < big * 0.75 and o[0].stop < base_bottom - big * 0.25
-        (sup if small_high else main)[lab == i] = 1
-    def ocr(m):
+        (sup_ids if small_high else main_ids).append(i)
+    def ocr_ids(ids):
+        m = np.isin(lab, ids)
         if not m.any(): return ""
         ys, xs = np.nonzero(m)
         crop = m[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
@@ -46,16 +48,34 @@ def read_chord(mask, box, tmp):
         img = np.pad((1 - crop) * 255, 12, constant_values=255).astype(np.uint8)
         img = np.asarray(Image.fromarray(img).resize((img.shape[1] * scale, img.shape[0] * scale), Image.NEAREST))
         return tess_best(img, tmp, single=crop.shape[1] < crop.shape[0] * 1.15)
-    m = ocr(main); s = ocr(sup)
-    # expoente: b/# logo depois da nota viram acidente; números/sus/add viram extensão
-    if s:
-        s = s.replace("-", "")
-        if s[:1] in ("b", "#") and len(m) >= 1 and not re.match(r"^[A-G][#b]", m):
-            m = m[0] + s[0] + m[1:]; s = s[1:]
-        if s:
-            if "/" in m: a, bb = m.split("/", 1); m = a + s + "/" + bb
-            else: m = m + s
-    return fix(m)
+    m = ocr_ids(main_ids)
+    if not sup_ids: return fix(m)
+    # agrupa os expoentes por posição (pode haver um antes e outro depois da '/')
+    sup_sorted = sorted(sup_ids, key=lambda i: objs[i - 1][1].start)
+    groups = []
+    for i in sup_sorted:
+        if groups and objs[i - 1][1].start - objs[groups[-1][-1] - 1][1].stop < big * 0.35: groups[-1].append(i)
+        else: groups.append([i])
+    # posição x da '/' no acorde principal (proporcional ao texto lido)
+    main_x0 = min(objs[i - 1][1].start for i in main_ids) if main_ids else 0
+    main_x1 = max(objs[i - 1][1].stop for i in main_ids) if main_ids else 1
+    slash_x = None
+    if "/" in m and len(m) > 1:
+        mains = sorted(main_ids, key=lambda i: objs[i - 1][1].start)
+        k = m.index("/")
+        slash_x = objs[mains[k] - 1][1].start if len(mains) == len(m) else main_x0 + (main_x1 - main_x0) * k / len(m)
+    head, bass = (m.split("/", 1) + [""])[:2] if "/" in m else (m, None)
+    for g in groups:
+        st = ocr_ids(g).replace("-", "")
+        if not st: continue
+        gx = objs[g[0] - 1][1].start
+        if bass is not None and slash_x is not None and gx > slash_x:
+            bass = bass + st                       # D/F# : o '#' é do baixo
+        elif st[:1] in ("b", "#") and head and not re.match(r"^[A-G][#b]", head):
+            head = head[0] + st[0] + head[1:] + st[1:]   # F#m, F#7
+        else:
+            head = head + st                       # A7, Esus4, A9
+    return fix(head + ("/" + bass if bass is not None else ""))
 
 def fix(t):
     t = t.replace("-", "")

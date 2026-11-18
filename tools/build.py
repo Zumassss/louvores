@@ -308,7 +308,8 @@ def _add_new(path, src, colfn):
 _add_new(os.path.join(TOOLS, "coletaneas", "cifras2025.json"), "Coletânea Cifras 2025", lambda x: (None, None))
 _add_new(os.path.join(TOOLS, "coletaneas", "cias2024.json"), "Coletânea CIAs 2024",
          lambda x: ("Coletânea CIAs", "CIA " + x["num"].zfill(3)) if x["page"] < 192 else ("Avulsos CIAs", None))
-_add_new(os.path.join(TOOLS, "coletaneas", "nivel2.json"), "Coletânea Cifrada Nível II", lambda x: ("Coletânea", x["num"].zfill(3)))
+_add_new(os.path.join(TOOLS, "coletaneas", "nivel2.json"), "Coletânea Cifrada Nível II",
+         lambda x: ("Coletânea", x["num"].zfill(3)) if x["page"] < 345 else ("Coletânea CIAs", "CIA " + x["num"].zfill(3)))
 def _numkey(n):
     m = re.match(r"^(CIA\s*)?([A-Z]?)0*(\d+)$", n or "")
     return ((m.group(1) and "cia") or m.group(2).lower(), int(m.group(3))) if m else None
@@ -351,7 +352,20 @@ for x in NEWSRC:
     num = x["num"] or ""
     s_ = {"n": num, "m": [], "t": sentence(x["title"]).replace(" ,", ","), "c": col, "g": "", "a": [], "k": "cifra", "d": [], "x": "", "_new": x}
     data.append(s_); _by_title[tkey(s_["t"])].append(s_); NEW_NEW += 1
-print("coletâneas novas:", len(NEWSRC), "cifras;", NEW_MATCH, "em louvores existentes;", NEW_NEW, "louvores novos")
+# louvores repetidos no site (mesma música em outra pasta) também usam a cifra
+_extra = 0
+for s_ in data:
+    if s_.get("_new"): continue
+    k0 = tkey(s_["t"])
+    best, br = None, 0
+    for x in NEWSRC:
+        kx = tkey(sentence(x["title"]))
+        r = _dl.SequenceMatcher(None, kx, k0).ratio()
+        if len(k0.split()) >= 3 and (kx.startswith(k0 + " ") or k0.startswith(kx + " ")) and len(kx.split()) >= 3: r = max(r, 0.93)
+        if r > br: best, br = x, r
+    if best is not None and br >= 0.92:
+        s_["_new"] = best; _extra += 1
+print("coletâneas novas:", len(NEWSRC), "cifras;", NEW_MATCH, "em louvores existentes;", NEW_NEW, "louvores novos;", _extra, "repetidos com a mesma cifra")
 
 # ---- cifras em texto (acordes + letra, com troca de tom no app) ----
 CIFRAS = {}
