@@ -1,7 +1,7 @@
 """Gera docs/data.js + copia PDFs. Entrada: songs2.json, cadernos.json, pdf/, txt/."""
 import json, re, os, shutil, unicodedata, hashlib, subprocess, collections
 
-# Rode a partir da pasta de trabalho (files.json, songs2.json, cadernos.json, letras_slides.json, cifras.json, pdf/ e txt/).
+# Rode a partir da pasta de trabalho (files.json, songs2.json, cadernos.json, letras_slides.json, cifras.json, s2c.json, pdf/ e txt/).
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(TOOLS, "..", "docs")
 
@@ -300,6 +300,20 @@ if os.path.exists("cifras.json"):
                 got = True
             if key in allc:
                 doc[1] = doc[1].replace("Cifra", "Cifra (PDF)", 1).replace("Harmonia", "Harmonia (PDF)", 1)
+        # cifra gerada a partir da partitura (acordes da partitura sobre as sílabas)
+        if not got and os.path.exists("s2c.json"):
+            if "_s2c" not in globals():
+                globals()["_s2c"] = json.load(open("s2c.json"))
+            for doc in s_["d"]:
+                r = _s2c.get(doc[0])
+                if not r or r["nch"] < 6 or not any(l.startswith("c:") for l in r["l"]): continue
+                good = r["nw"] >= 25 and ((r["hit"] is not None and r["hit"] >= 0.75) or (r["hit"] is None and r.get("gh", 0) >= 0.97))
+                fair = r["nw"] >= 12 and ((r["hit"] is not None and r["hit"] >= 0.5) or (r["hit"] is None and r.get("gh", 0) >= 0.85))
+                if good or fair:
+                    CIFRAS[doc[0]] = {"k": r["k"], "l": r["l"], "g": 1 if good else 2}
+                    s_["d"].insert(0, ["C:" + doc[0], "Cifra" if good else "Cifra (revisar)", 0, 0])
+                    got = True
+                    break
         if got:
             s_["k"] = "cifra"
             s_["x"] = s_["x"]  # texto de busca já inclui a cifra

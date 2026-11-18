@@ -57,6 +57,7 @@ def junk(t):
     """Símbolos musicais soltos (notas, pausas, quiálteras) que caem na mesma altura."""
     return (not re.search(r"[A-Za-zÀ-ÿ0-9]", t)) or len(t) <= 2 and not re.match(r"^[A-G]", t) or re.fullmatch(r"[\d.()|%]+", t) is not None
 
+LABELW = re.compile(r"(?i)^(mulheres|homens|vozes|voz|baixo|el[eé]trico|coro|piano|teclado|guitarra|viol[aã]o|bateria|soprano|contralto|tenor|todos|solo|un[ií]s\.?|tutti|cordas|sopros|metais|madeiras|flauta|violino|violoncelo|viola|trompete|trombone|sax|clarinete|fagote|obo[eé]|harpa|orquestra[cç][aã]o|arranjo|arr\.|let\.|m[uú]s\.|letra|m[uú]sica|adapt\.|trad\.|vers[aã]o|revis[aã]o)$")
 GLYPH = re.compile(r"^[ewæœ˙Œ‰Ó∑»«ˆ˘]+™?$|^[a-z]$")
 def lyric_row(r, W):
     body = [w for w in r if w["x0"] > W * 0.08 and not NOISE.match(w["t"])]
@@ -123,12 +124,19 @@ def convert(path):
             c = chord_row(r, W)
             if c: kinds.append(("c", r[0]["y0"], c)); continue
             l = lyric_row(r, W)
-            if l: kinds.append(("l", r[0]["y0"], l))
+            if l: kinds.append(("l", r[0]["y0"], l)); continue
+            # linha curta (anacruse: "Qual foi o", "Oh!"): 1-2 palavras de verdade
+            body = [w for w in r if w["x0"] > W * 0.15 and not NOISE.match(w["t"])]
+            if any(LABELW.match(w["t"]) for w in r): continue
+            sy = [w for w in body if re.search(r"[A-Za-zÀ-ÖØ-öø-ÿ]{2}|^[AEOÓÉÀaeoóé][,!]?$", w["t"]) and not CH.match(w["t"]) and not GLYPH.match(w["t"])]
+            if sy and len(sy) >= len(body) - sum(1 for w in body if w["t"] in ("-", "–")) and len(sy) <= 4:
+                my = mode_y(sy)
+                kinds.append(("w", r[0]["y0"], [w for w in r if abs(w["y0"] - my) <= 1.2 and w["x0"] > W * 0.08]))
         # cada hífen solto pertence à linha de letra mais próxima (estrofes ficam bem juntas)
-        lys = [mode_y([w for w in k[2] if len(w["t"]) > 1] or k[2]) for k in kinds if k[0] == "l"]
-        inrow = {id(w) for k in kinds if k[0] == "l" for w in k[2]}
+        lys = [mode_y([w for w in k[2] if len(w["t"]) > 1] or k[2]) for k in kinds if k[0] in ("l", "w")]
+        inrow = {id(w) for k in kinds if k[0] in ("l", "w") for w in k[2]}
         stray = {}
-        lrows = [(mode_y([w for w in k[2] if len(w["t"]) > 1] or k[2]), k[2]) for k in kinds if k[0] == "l"]
+        lrows = [(mode_y([w for w in k[2] if len(w["t"]) > 1] or k[2]), k[2]) for k in kinds if k[0] in ("l", "w")]
         for w in allw:
             if w["t"] in ("-", "–") and id(w) not in inrow and lrows:
                 hx = (w["x0"] + w["x1"]) / 2
@@ -149,7 +157,7 @@ def convert(path):
             chords.sort(key=lambda w: w["x0"])
             # estrofes logo abaixo
             verses = []
-            while j < len(kinds) and kinds[j][0] == "l" and kinds[j][1] - y < 120:
+            while j < len(kinds) and (kinds[j][0] == "l" or (kinds[j][0] == "w" and kinds[j][1] - y < 75)) and kinds[j][1] - y < 120:
                 if verses and kinds[j][1] - verses[-1][0]["y0"] > 22: break
                 row = list(kinds[j][2]); ry = mode_y([w for w in row if len(w["t"]) > 1] or row)
                 # hífens que ficaram um pouco fora da linha: só os que estão mais perto DESTA linha de letra
@@ -160,7 +168,7 @@ def convert(path):
                 row.sort(key=lambda w: w["x0"])
                 verses.append(row); j += 1
             # outras vozes (mais abaixo, sem acorde) são ignoradas
-            while j < len(kinds) and kinds[j][0] == "l": j += 1
+            while j < len(kinds) and kinds[j][0] in ("l", "w"): j += 1
             if not verses and len(chords) == 1 and len(chords[0]["t"]) <= 2:
                 i = j; continue   # letra de ensaio (A, B, C...) e não acorde
             systems.append((chords, verses))

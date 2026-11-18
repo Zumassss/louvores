@@ -1,5 +1,5 @@
 // Gerado automaticamente — a versão muda a cada atualização dos dados.
-const SHELL = "louvores-shell-c7eeffe06d";
+const SHELL = "louvores-shell-0459dbbdc5";
 const PDF = "louvores-pdf-v1";
 const FILES = ["./", "index.html", "style.css", "app.js", "data.js", "manifest.webmanifest", "lib/pdf.min.mjs", "lib/pdf.worker.min.mjs", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-32.png", "icons/icon-512.png", "img/icm-red.svg", "img/icm-white.svg", "img/icm.svg", "fonts/nunito-sans-latin-wght-italic.woff2", "fonts/nunito-sans-latin-wght-normal.woff2", "lib/standard_fonts/FoxitDingbats.pfb", "lib/standard_fonts/FoxitFixed.pfb", "lib/standard_fonts/FoxitFixedBold.pfb", "lib/standard_fonts/FoxitFixedBoldItalic.pfb", "lib/standard_fonts/FoxitFixedItalic.pfb", "lib/standard_fonts/FoxitSerif.pfb", "lib/standard_fonts/FoxitSerifBold.pfb", "lib/standard_fonts/FoxitSerifBoldItalic.pfb", "lib/standard_fonts/FoxitSerifItalic.pfb", "lib/standard_fonts/FoxitSymbol.pfb", "lib/standard_fonts/LICENSE_FOXIT", "lib/standard_fonts/LICENSE_LIBERATION", "lib/standard_fonts/LiberationSans-Bold.ttf", "lib/standard_fonts/LiberationSans-BoldItalic.ttf", "lib/standard_fonts/LiberationSans-Italic.ttf", "lib/standard_fonts/LiberationSans-Regular.ttf"];
 

@@ -594,7 +594,7 @@
     var d = cur;
     $("dNum").textContent = d && d.n ? d.n : "";
     $("dTitle").textContent = d ? d.t : $("vName").textContent;
-    $("dCol").textContent = (d ? d.cs : "Caderno") + (view === "cifra" && curCifra && curCifra.g ? " · cifra montada a partir da partitura" : "");
+    $("dCol").textContent = (d ? d.cs : "Caderno") + (view === "cifra" && curCifra && curCifra.g ? (curCifra.g === 2 ? " · cifra montada da partitura — confira, pode ter palavras quebradas" : " · cifra montada a partir da partitura") : "");
     $("dDocs").innerHTML = curDocs.map(function (x, i) {
       var ic = /^(C:|M:)/.test(x[0]) ? "♪" : /^L\d/.test(x[0]) ? "¶" : "▤";
       return '<button type="button" role="tab" data-i="' + i + '" aria-selected="' + (i === curIdx) + '"><span class="di">' + ic + "</span>" + esc(x[1]) + "</button>";

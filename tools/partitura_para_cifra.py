@@ -21,6 +21,10 @@ def vocab_of(title):
 GV = set()
 for txt in letras:
     GV |= {nk(w) for w in re.split(r"[\s,.;:!?()§\-]+", txt) if nk(w)}
+import gzip, os, spellchecker
+_pt = json.load(gzip.open(os.path.join(os.path.dirname(spellchecker.__file__), "resources", "pt.json.gz")))
+PT = {nk(w) for w, f in _pt.items() if f >= 40 and (len(nk(w)) >= 3 or nk(w) in ("a", "e", "o", "ao", "ai", "eu", "tu", "se", "me", "te", "lhe", "nos", "vos", "da", "do", "de", "em", "no", "na", "um", "ou", "oh", "ah", "ja", "so", "la", "ca", "pe", "fe", "re", "os", "as", "mi", "ti", "si", "lo", "la", "lu", "di", "vi", "ve", "ha", "e", "ei", "is"))}
+GVX = GV | PT
 def job(t):
     title, fid, lab = t
     try:
@@ -42,13 +46,13 @@ with ProcessPoolExecutor(8) as ex:
                 if re.match(r"^L\d+$", x[0]): lw = norm(letras[int(x[0][1:])])
         ref = set(lw) if lw else None
         hit = (sum(1 for w in words if w in ref) / max(1, len(words))) if ref else None
-        gh = sum(1 for w in words if "".join(w) in GV) / max(1, len(words))
+        gh = sum(1 for w in words if "".join(w) in GVX) / max(1, len(words))
         r["hit"] = hit; r["nw"] = len(words); r["gh"] = gh
         out[fid] = r
         rep.append((title, r["nch"], r["nsyl"], len(words), None if hit is None else round(hit, 2)))
 json.dump(out, open("s2c.json", "w"), ensure_ascii=False)
 for fid, r in out.items():
-    r["ok"] = r["nch"] >= 8 and r["nw"] >= 25 and ((r["hit"] is not None and r["hit"] >= 0.75) or (r["hit"] is None and r["gh"] >= 0.9))
+    r["ok"] = r["nch"] >= 8 and r["nw"] >= 25 and ((r["hit"] is not None and r["hit"] >= 0.75) or (r["hit"] is None and r["gh"] >= 0.97))
 json.dump(out, open("s2c.json", "w"), ensure_ascii=False)
 ok = [r for r in out.values() if r["ok"]]
 print("sem referência aprovadas:", sum(1 for r in ok if r["hit"] is None), "de", sum(1 for r in out.values() if r["hit"] is None))
