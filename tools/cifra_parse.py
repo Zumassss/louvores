@@ -12,7 +12,7 @@ import re, subprocess, html, json, sys, unicodedata
 
 WORD = re.compile(r'<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)</word>')
 PAGE = re.compile(r'<page width="([\d.]+)" height="([\d.]+)">(.*?)</page>', re.S)
-CH = r"[A-G](?:#|b)?(?:maj|min|m|M|dim|aug|sus|add|º|°|ø|Ø|\+)?[0-9]*(?:b5|#5)?(?:\([^)\s]{1,12}\))?(?:maj|sus|add|m)?[0-9]*(?:\([^)\s]{1,12}\))?(?:/[A-G](?:#|b)?)?"
+CH = r"[A-G](?:#|b)?(?:maj|Maj|min|m|M|dim|aug|sus|add|º|°|ø|Ø|\+)?[0-9]*(?:M|b5|#5|\+5|-5|\+)?(?:/[0-9]+)*(?:\((?! )[^)]{1,12}(?<! )\))?(?:maj|Maj|sus|add|m|M)?[0-9]*(?:/[0-9]+)*(?:\((?! )[^)]{1,12}(?<! )\))?(?:sus[0-9]*)?(?:/[A-G](?:#|b)?)?"
 CHORD = re.compile(r"^" + CH + r"$")
 SEP = re.compile(r"^(\||\|\||%|-|–|\(?\d+x\)?|x\d+|\(bis\)|bis)$", re.I)
 
@@ -72,7 +72,7 @@ def columns(W, H, ws):
         out[k].append(w)
     return [c for c in out if c]
 
-SUP = re.compile(r"^(?:[0-9]+|\([^)]*\)|maj[0-9]*|sus[0-9]*|add[0-9]*|dim|aug|º|°|ø|\+|M[0-9]*|/[A-G](?:#|b)?)+$")
+SUP = re.compile(r"^(?:#|[0-9]+(?:/[0-9]+)*|/[0-9]+|\([^)]*\)|maj[0-9]*|sus[0-9]*|add[0-9]*|dim|aug|º|°|ø|\+|M[0-9]*|/[A-G](?:#|b)?)+$")
 def glue(ws):
     ws = sorted(ws, key=lambda w: (w["x0"], w["y0"]))
     out = []
@@ -80,7 +80,7 @@ def glue(ws):
         out.append(dict(w))
     # acordes com parênteses quebrados em pedaços: "F9" "(" "#11" ")" -> "F9(#11)"
     CHORDISH = re.compile(r"^[A-G](#|b)?[0-9mMajsudi+º°()#b/A-G]*$")
-    FRAG = re.compile(r"^[()#b0-9+º°Øø]+$|^\(?(sus|add|maj|dim|aug)[0-9]*\)?$|^/[A-G](#|b)?$|^[0-9]*\([^ ]*$|^\)(/[A-G](#|b)?)?$")
+    FRAG = re.compile(r"^[()#b0-9+º°Øø]+$|^\(?(sus|add|maj|dim|aug)[0-9]*\)?$|^/[A-G](#|b)?$|^[0-9]*\((?![A-G])[^ ]*$|^\)(/[A-G](#|b)?)?$")
     rows = sorted(out, key=lambda w: w["x0"])
     for i, a in enumerate(rows):
         if a.get("del") or not CHORDISH.match(a["t"]): continue
@@ -90,14 +90,29 @@ def glue(ws):
             gap = b["x0"] - a["x1"]
             if FRAG.match(b["t"]) and (gap < 1.2 or (gap < 4.6 and (a["t"].count("(") > a["t"].count(")") or b["t"][0] in "(/Øø" or re.match(r"^[0-9]", b["t"]) and len(a["t"]) <= 2))):
                 a["t"] += b["t"]; a["x1"] = b["x1"]; b["del"] = True
+    for i, a in enumerate(rows):                      # "E/" "A" -> "E/A"
+        if a.get("del") or not re.match(r"^[A-G](#|b)?[^ ]*/$", a["t"]): continue
+        for b in rows[i + 1:]:
+            if b.get("del") or abs(b["y0"] - a["y0"]) > 3.5: continue
+            if 0 <= b["x0"] - a["x1"] < 6 and re.match(r"^[A-G](#|b)?$", b["t"]):
+                a["t"] += b["t"]; a["x1"] = b["x1"]; b["del"] = True
+            break
+    for i, a in enumerate(rows):                      # "/" "9" -> "/9"  (Bb6 / 9)
+        if a.get("del") or a["t"] != "/": continue
+        for b in rows[i + 1:]:
+            if b.get("del") or abs(b["y0"] - a["y0"]) > 3.5: continue
+            if 0 <= b["x0"] - a["x1"] < 6 and re.match(r"^[0-9]+$", b["t"]):
+                a["t"] += b["t"]; a["x1"] = b["x1"]; b["del"] = True
+            break
     changed = True
     while changed:
         changed = False
         for w in out:
-            if w.get("del") or not SUP.match(w["t"]): continue
+            if w.get("del") or not (SUP.match(w["t"]) or re.match(r"^((#|b)?m|Maj|maj)[0-9(]", w["t"] + "7") and len(w["t"]) <= 9): continue
             for p in out:
                 if p is w or p.get("del"): continue
-                if -0.5 <= w["x0"] - p["x1"] < 2.6 and abs(p["y0"] - w["y0"]) < 7 and CHORD.match(p["t"] + w["t"]) and re.match(r"^[A-G]", p["t"]):
+                lim = 4.8 if re.match(r"^(M|maj|Maj|#|b\b|[0-9]+/[0-9]|/[0-9]|m)", w["t"]) else 2.6
+                if -0.5 <= w["x0"] - p["x1"] < lim and abs(p["y0"] - w["y0"]) < 7 and CHORD.match(p["t"] + w["t"]) and re.match(r"^[A-G]", p["t"]):
                     p["t"] += w["t"]; p["x1"] = w["x1"]; w["del"] = True; changed = True; break
     return [w for w in out if not w.get("del")]
 
@@ -108,6 +123,29 @@ def lines_of(ws):
         if lines and abs(lines[-1][0]["y0"] - w["y0"]) < 2.5: lines[-1].append(w)
         else: lines.append([w])
     for l in lines: l.sort(key=lambda w: w["x0"])
+    # linha de acordes com barras de compasso grudadas ("|G7(4" "9)" ...)
+    for k, l in enumerate(lines):
+        if not any("|" in w["t"] for w in l): continue
+        new = []
+        for w in l:
+            t = w["t"].strip("|")
+            if not t: continue
+            if new and new[-1]["t"].count("(") > new[-1]["t"].count(")"):
+                new[-1] = dict(new[-1], t=new[-1]["t"] + " " + t, x1=w["x1"]); continue
+            new.append(dict(w, t=t))
+        if new and is_chord_line(new) and all(CHORD.match(w["t"]) or SEP.match(w["t"]) for w in new): lines[k] = new
+    # acordes colados sem espaço ("AE", "AEAB") numa linha que, separada, vira linha de acordes
+    MULTI = re.compile(r"^(?:[A-G](?:#|b)?){2,5}$")
+    for k, l in enumerate(lines):
+        if not any(MULTI.match(w["t"]) for w in l): continue
+        new = []
+        for w in l:
+            if MULTI.match(w["t"]):
+                parts = re.findall(r"[A-G](?:#|b)?", w["t"]); step = (w["x1"] - w["x0"]) / len(w["t"]); pos = w["x0"]
+                for p in parts:
+                    new.append(dict(w, t=p, x0=pos, x1=pos + step * len(p))); pos += step * len(p)
+            else: new.append(w)
+        if is_chord_line(new) and len(new) >= 2: lines[k] = new
     return lines
 
 def is_chord_line(l):
@@ -212,7 +250,7 @@ def merge(chords, lyric_words):
 
 HEAD_SKIP = re.compile(r"(?i)^(www\.|louvoricm|cifra atualizada|material passando|atualizado em|p[aá]gina|\d{1,3}$)")
 LABEL = re.compile(r"(?i)^(coro|final|ponte|refr[aã]o|estrofe|verso|parte|solo|interl[uú]dio|pr[eé]-?refr[aã]o|instrumental)\b[^:]*:?$")
-INLINE = re.compile(r"(?i)^(introdu[cç][aã]o|instrumental|intro|interl[uú]dio|final|solo|ponte)\s*:")
+INLINE = re.compile(r"(?i)^(introdu[cç][aã]o|instrumental|instrumentos?|instr\.?|intro|interl[uú]dio|final|solo|ponte)\s*:")
 
 def to_lines(raw):
     """raw: lista de linhas (cada uma lista de palavras) já em ordem de leitura."""

@@ -304,7 +304,7 @@ def _add_new(path, src, colfn):
     for x in json.load(open(path)):
         if x.get("nc", 0) < 3: continue
         col, num = colfn(x)
-        NEWSRC.append({"src": src, "col": col, "num": num, "title": x["title"], "k": x.get("key", ""), "l": x["lines"]})
+        NEWSRC.append({"src": src, "col": col, "num": num, "title": x["title"], "k": x.get("key", ""), "l": x["lines"], "page": x.get("page"), "pdf": path.replace(".json", ".pdf")})
 _add_new(os.path.join(TOOLS, "coletaneas", "cifras2025.json"), "Coletânea Cifras 2025", lambda x: (None, None))
 _add_new(os.path.join(TOOLS, "coletaneas", "cias2024.json"), "Coletânea CIAs 2024",
          lambda x: ("Coletânea CIAs", "CIA " + x["num"].zfill(3)) if x["page"] < 192 else ("Avulsos CIAs", None))
@@ -369,6 +369,7 @@ print("coletâneas novas:", len(NEWSRC), "cifras;", NEW_MATCH, "em louvores exis
 
 # ---- cifras em texto (acordes + letra, com troca de tom no app) ----
 CIFRAS = {}
+_PIPE = {}
 if os.path.exists("cifras.json"):
     allc = json.load(open("cifras.json"))
     for s_ in data:
@@ -378,14 +379,16 @@ if os.path.exists("cifras.json"):
             key = doc[0] + (":%d" % doc[2] if doc[2] else "")
             if key in allc and not got:
                 CIFRAS[key] = {"k": allc[key]["key"], "l": allc[key]["lines"]}
+                _PIPE[key] = (f"pdf/{doc[0]}.pdf", list(range(doc[2], (doc[3] or doc[2]) + 1)) if doc[2] else None, not doc[2])
                 s_["d"].insert(0, ["C:" + key, "Cifra", 0, 0])
                 got = True
             if key in allc:
                 doc[1] = doc[1].replace("Cifra", "Cifra (PDF)", 1).replace("Harmonia", "Harmonia (PDF)", 1)
         # cifra das coletâneas cifradas novas
         if not got and s_.get("_new"):
-            x = s_["_new"]; kk = "N:" + str(abs(hash(x["src"] + x["title"] + str(x["num"]))) % 10**10)
+            x = s_["_new"]; kk = "N:" + str(int(hashlib.md5((x["src"] + x["title"] + str(x["num"])).encode()).hexdigest(), 16) % 10**10)
             CIFRAS[kk] = {"k": x["k"], "l": x["l"], "src": x["src"]}
+            if x.get("page") and "nivel2" not in x["pdf"]: _PIPE[kk] = (x["pdf"], [x["page"], x["page"] + 1], False)
             s_["d"].insert(0, ["C:" + kk, "Cifra", 0, 0])
             if not s_["x"]: s_["x"] = lyrics("\n".join(re.sub(r"\[[^\]]*\]", "", l[2:]) for l in x["l"] if l[:2] in ("c:", "t:")))[:5000]
             got = True
@@ -442,6 +445,59 @@ with _TPE(8) as _ex:
     RECORTES = {fid: r for fid, r in _ex.map(_crop.analyse, grade_ids) if r}
 print("grades recortadas:", len(RECORTES), "de", len(grade_ids))
 
+# ---- posições exatas pelos '|' do PDF ----
+import pipe_fix as _pf, pdfplumber as _plb
+_pst = collections.Counter()
+for _k, (_path, _pages, _whole) in _PIPE.items():
+    if not os.path.exists(_path): continue
+    if _pages is None:
+        with _plb.open(_path) as _d: _pages = list(range(1, len(_d.pages) + 1))
+    _new, _how = _pf.fix(CIFRAS[_k]["l"], _path, tuple(_pages), _whole)
+    _pst[_how.split(":")[0]] += 1
+    CIFRAS[_k]["l"] = _new
+print("marcas |:", dict(_pst))
+
+# ---- correções conferidas no PDF (casos que a leitura automática não resolve) ----
+if os.path.exists(os.path.join(TOOLS, "overrides.json")):
+    for _k, _rules in json.load(open(os.path.join(TOOLS, "overrides.json"))).items():
+        if _k not in CIFRAS: print("override sem cifra:", _k); continue
+        _l = CIFRAS[_k]["l"]
+        for _old, _new in _rules:
+            _i = 0; _hit = 0
+            while _i <= len(_l) - len(_old):
+                if _l[_i:_i + len(_old)] == _old: _l[_i:_i + len(_old)] = _new; _hit += 1; _i += len(_new)
+                else: _i += 1
+            if not _hit: print("override não aplicado:", _k, _old)
+
+# ---- acabamento das cifras: sequências de acordes soltas viram linha de acordes; 7 9 -> 7(9) ----
+import cifra_parse as _cp
+def _fixch(ch):
+    return re.sub(r"^([A-G](?:#|b)?m?)7(9|11|13)(?=\(|$|/)", r"\g<1>7(\2)", ch)
+def _post(lines):
+    out = []
+    for l in lines:
+        if l.startswith(("c:", "a:", "i:")):
+            l = re.sub(r"\[([^\]]+)\]", lambda m: "[" + _fixch(m.group(1)) + "]", l)
+        elif l.startswith("t:"):
+            toks = l[2:].split()
+            core = [t.strip("(),.[]:") for t in toks]
+            nch = sum(1 for t in core if t and _cp.CHORD.match(t))
+            words = [t for t in core if t and not _cp.CHORD.match(t)]
+            lead = next((j for j, t in enumerate(core) if not (t and _cp.CHORD.match(t))), len(core))
+            if lead >= 3 or nch and nch >= 2 * len(words) or (nch >= 2 and re.match(r"(?i)^\(?(instr|final|intro)", l[2:])):
+                def br(m):
+                    t = m.group(0); c = t.strip("(),.[]:")
+                    return t.replace(c, "[" + _fixch(c) + "]") if c and _cp.CHORD.match(c) else t
+                l = "i:" + re.sub(r"\S+", br, l[2:])
+        out.append(l)
+    return out
+_np = 0
+for _k, _c in CIFRAS.items():
+    _new = _post(_c["l"])
+    if _new != _c["l"]: _np += 1
+    _c["l"] = _new
+print("cifras com acabamento:", _np)
+
 ver = hashlib.sha1(json.dumps([data, cad_out, RECORTES, CIFRAS], sort_keys=True).encode()).hexdigest()[:10]
 with open(f"{OUT}/data.js", "w") as f:
     f.write("window.LOUVORES=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
@@ -461,6 +517,6 @@ for sub in ["icons", "img", "fonts", "lib/standard_fonts"]:
     for fn in sorted(os.listdir(f"{OUT}/{sub}")):
         if not fn.endswith(".txt"): shell.append(f"{sub}/{fn}")
 code_ver = hashlib.sha1(b"".join(open(f"{OUT}/{p}", "rb").read() for p in shell if p != "./")).hexdigest()[:10]
-tpl = open(os.path.join(TOOLS, "sw.template.js")).read().replace("__VERSION__", code_ver).replace("__FILES__", json.dumps(shell))
+tpl = open("sw.template.js").read().replace("__VERSION__", code_ver).replace("__FILES__", json.dumps(shell))
 open(f"{OUT}/sw.js", "w").write(tpl)
 print("sw versão", code_ver, len(shell), "arquivos do app")
