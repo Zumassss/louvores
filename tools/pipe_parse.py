@@ -111,6 +111,12 @@ def page(pdf, pg):
             for h in chords:
                 if h["seg"] == rowsab[0][0] and not h["used"]:
                     pos = next((k for k, x in enumerate(xs) if x >= h["x"] - 1.5), len(text))
+                    # sem '|': nunca no meio de uma palavra que já tem acorde -> vai para o fim da palavra
+                    if 0 < pos < len(text) and text[pos - 1].isalpha() and text[pos].isalpha():
+                        ws = pos
+                        while ws > 0 and text[ws - 1].isalpha(): ws -= 1
+                        if any(ws <= p0 < pos for p0, _ in ins):
+                            while pos < len(text) and (text[pos].isalpha() or text[pos] in ".,;:!?"): pos += 1
                     h["used"] = True; ins.append((pos, h["t"]))
             ins.sort(key=lambda t: t[0])
         if ins:

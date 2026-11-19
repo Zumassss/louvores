@@ -1,4 +1,35 @@
 {
- "N:8531013133": [[["t:F Coro", "t:Cristo nos ama,"], ["c:Cristo nos [F]ama,"]]],
- "1PouOFtKRLZFjzXdKx48oq1JFSzO1C9ca:7": [[["t:Cm/G C ma7 /G Gmaj7", "t:Isaque e Ja có,"], ["c:Isaque [Cm/G]e Ja [Cmaj7/G]có,[Gmaj7]"]]]
+ "N:8531013133": [
+  [
+   [
+    "t:F Coro",
+    "t:Cristo nos ama,"
+   ],
+   [
+    "c:Cristo nos [F]ama,"
+   ]
+  ]
+ ],
+ "1PouOFtKRLZFjzXdKx48oq1JFSzO1C9ca:7": [
+  [
+   [
+    "t:Cm/G C ma7 /G Gmaj7",
+    "t:Isaque e Ja có,"
+   ],
+   [
+    "c:Isaque [Cm/G]e Ja [Cmaj7/G]có,[Gmaj7]"
+   ]
+  ]
+ ],
+ "N:7296473602": [
+  [
+   [
+    "a:[Gb] [Db]",
+    "c:Je[Bbm7]sus é o Lírio dos Vales, a Rosa de Sa[Db]rom."
+   ],
+   [
+    "c:Je[Gb]sus é o Lírio dos Vales, a Rosa de Sa[Db]rom.[Bbm7]"
+   ]
+  ]
+ ]
 }

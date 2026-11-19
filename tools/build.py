@@ -321,6 +321,9 @@ for s_ in data:
 _by_title = collections.defaultdict(list)
 for s_ in data: _by_title[tkey(s_["t"])].append(s_)
 NEW_MATCH, NEW_NEW = 0, 0
+RETITLE = {"SALMO 91": "Salmo 91 (Seguro estou nos braços de Deus)"}
+NOMATCH = {("Coletânea Cifras 2025", "SALMO 91"), ("Coletânea Cifras 2025", "GRAÇAS TE DOU, Ó SENHOR"),
+           ("Coletânea Cifrada Nível II", "LOUVAI AO SENHOR TODAS AS NAÇÕES")}
 for x in NEWSRC:
     target = None
     if x["num"]:
@@ -344,27 +347,37 @@ for x in NEWSRC:
             r = _dl.SequenceMatcher(None, k_, k0).ratio()
             if r > br: best, br = lst[0], r
         if br >= 0.9: target = best
+    if (x["src"], x["title"]) in NOMATCH:    # título parecido, música diferente (conferido pela letra): só título igual
+        target = None if x["title"] in RETITLE else next(iter(_by_title.get(tkey(sentence(x["title"])), [])), None)
     if target is not None:
-        if "_new" not in target: target["_new"] = x; NEW_MATCH += 1
-        continue
+        lst = target.setdefault("_news", [])
+        if not any(y["src"] == x["src"] for y in lst):
+            lst.append(x); NEW_MATCH += 1
+            continue
+        # a mesma coletânea já deu cifra a este louvor: é outra música -> louvor próprio
+        same = next((s2 for s2 in _by_title.get(tkey(sentence(x["title"])), []) if s2 is not target), None)
+        if same is not None:
+            same.setdefault("_news", []).append(x); NEW_MATCH += 1; continue
     # louvor que ainda não existe no site
     col = x["col"] or "Cifras 2025"
     num = x["num"] or ""
-    s_ = {"n": num, "m": [], "t": sentence(x["title"]).replace(" ,", ","), "c": col, "g": "", "a": [], "k": "cifra", "d": [], "x": "", "_new": x}
+    s_ = {"n": num, "m": [], "t": RETITLE.get(x["title"]) or sentence(x["title"]).replace(" ,", ","), "c": col, "g": "", "a": [], "k": "cifra", "d": [], "x": "", "_news": [x]}
     data.append(s_); _by_title[tkey(s_["t"])].append(s_); NEW_NEW += 1
 # louvores repetidos no site (mesma música em outra pasta) também usam a cifra
 _extra = 0
 for s_ in data:
-    if s_.get("_new"): continue
+    if s_.get("_news"): continue
     k0 = tkey(s_["t"])
     best, br = None, 0
     for x in NEWSRC:
+        if (x["src"], x["title"]) in NOMATCH: continue
         kx = tkey(sentence(x["title"]))
         r = _dl.SequenceMatcher(None, kx, k0).ratio()
         if len(k0.split()) >= 3 and (kx.startswith(k0 + " ") or k0.startswith(kx + " ")) and len(kx.split()) >= 3: r = max(r, 0.93)
         if r > br: best, br = x, r
     if best is not None and br >= 0.92:
-        s_["_new"] = best; _extra += 1
+        s_["_news"] = [best]; _extra += 1
+json.dump([[s_["n"], s_["t"], x["src"], x["num"], x["title"]] for s_ in data for x in s_.get("_news", [])], open("coletaneas_ligacoes.json", "w"), ensure_ascii=False)
 print("coletâneas novas:", len(NEWSRC), "cifras;", NEW_MATCH, "em louvores existentes;", NEW_NEW, "louvores novos;", _extra, "repetidos com a mesma cifra")
 
 # ---- cifras em texto (acordes + letra, com troca de tom no app) ----
@@ -384,12 +397,15 @@ if os.path.exists("cifras.json"):
                 got = True
             if key in allc:
                 doc[1] = doc[1].replace("Cifra", "Cifra (PDF)", 1).replace("Harmonia", "Harmonia (PDF)", 1)
-        # cifra das coletâneas cifradas novas
-        if not got and s_.get("_new"):
-            x = s_["_new"]; kk = "N:" + str(int(hashlib.md5((x["src"] + x["title"] + str(x["num"])).encode()).hexdigest(), 16) % 10**10)
+        # cifras das coletâneas (todas viram versões do louvor; a primeira é a principal se não houver outra)
+        _PRI = {"Coletânea Cifras 2025": 0, "Coletânea CIAs 2024": 1, "Coletânea Cifrada Nível II": 2}
+        _SHORT = {"Coletânea Cifras 2025": "Cifras 2025", "Coletânea CIAs 2024": "CIAs 2024", "Coletânea Cifrada Nível II": "Nível II"}
+        _pos = 1 if got else 0
+        for x in sorted(s_.get("_news", []), key=lambda y: _PRI.get(y["src"], 9)):
+            kk = "N:" + str(int(hashlib.md5((x["src"] + x["title"] + str(x["num"])).encode()).hexdigest(), 16) % 10**10)
             CIFRAS[kk] = {"k": x["k"], "l": x["l"], "src": x["src"]}
             if x.get("page") and "nivel2" not in x["pdf"]: _PIPE[kk] = (x["pdf"], [x["page"], x["page"] + 1], False)
-            s_["d"].insert(0, ["C:" + kk, "Cifra", 0, 0])
+            s_["d"].insert(_pos, ["C:" + kk, "Cifra" if not got else "Cifra · " + _SHORT.get(x["src"], x["src"]), 0, 0]); _pos += 1
             if not s_["x"]: s_["x"] = lyrics("\n".join(re.sub(r"\[[^\]]*\]", "", l[2:]) for l in x["l"] if l[:2] in ("c:", "t:")))[:5000]
             got = True
         # cifra gerada a partir da partitura (acordes da partitura sobre as sílabas)
@@ -476,6 +492,10 @@ def _fixch(ch):
 def _post(lines):
     out = []
     for l in lines:
+        if l.startswith("h:"):
+            toks = [t.strip("(),.:") for t in l[2:].split()]
+            if sum(1 for t in toks if t and _cp.CHORD.match(t)) >= 2:
+                l = "t:" + l[2:]
         if l.startswith(("c:", "a:", "i:")):
             l = re.sub(r"\[([^\]]+)\]", lambda m: "[" + _fixch(m.group(1)) + "]", l)
         elif l.startswith("t:"):
