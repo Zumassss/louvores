@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Louvores</title>
 <meta name="description" content="Cifras e partituras de louvores — funciona sem internet.">
-<meta name="theme-color" content="#b3232a">
+<meta name="theme-color" content="#f7f4f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141112" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Louvores">
 <meta name="format-detection" content="telephone=no">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -18,54 +19,109 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="hero">
-  <div class="hero-inner">
-    <div class="brand">
-      <img class="logo" src="img/icm-white.svg" alt="Igreja Cristã Maranata" width="118" height="27">
-      <div class="brand-text">
-        <h1>Louvores</h1>
-        <p class="sub">Cifras e partituras</p>
-      </div>
+
+<!-- ================= Aba: Louvores ================= -->
+<section id="tabSongs" class="tab">
+  <header class="top">
+    <div class="top-row">
+      <img class="logo" src="img/icm-red.svg" alt="Igreja Cristã Maranata" width="96" height="22">
+      <button id="offlineBtn" class="status" type="button" aria-live="polite" aria-label="Uso sem internet"><span class="dot"></span><span id="offlineTxt">Preparando…</span></button>
     </div>
-    <button id="offlineBtn" class="pill" type="button" aria-live="polite"><span class="dot"></span><span id="offlineTxt">Preparando…</span></button>
-  </div>
-</header>
+    <h1 class="big">Louvores</h1>
+  </header>
 
-<div class="searchbar" id="searchbar">
-  <div class="search-wrap">
-    <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-    <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Número, título ou trecho da letra" aria-label="Buscar louvor">
-    <button id="clear" class="clear" type="button" aria-label="Limpar busca" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+  <div class="searchbar" id="searchbar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Número, título ou trecho da letra" aria-label="Buscar louvor">
+      <button id="clear" class="clear" type="button" aria-label="Limpar busca" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="chips" id="chips" role="tablist" aria-label="Filtros"></div>
   </div>
-  <div class="chips" id="chips" role="tablist" aria-label="Filtros"></div>
-</div>
 
-<main>
-  <div id="meta" class="meta"></div>
-  <ul id="list" class="list"></ul>
-  <div id="empty" class="empty" hidden>
-    <img src="img/icm-red.svg" alt="" width="120" height="28">
-    <p>Nenhum louvor encontrado.</p>
-    <span>Tente outra palavra, o número ou um trecho diferente da letra.</span>
-  </div>
-  <footer class="foot"><img src="img/icm-red.svg" alt="" width="84" height="20"><span id="ver"></span></footer>
-</main>
+  <main class="wrap">
+    <div id="meta" class="meta"></div>
+    <ul id="list" class="list"></ul>
+    <div id="empty" class="empty" hidden>
+      <div class="empty-ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <p>Nenhum louvor encontrado</p>
+      <span>Tente outra palavra, o número ou um trecho diferente da letra.</span>
+    </div>
+    <footer class="foot"><img src="img/icm-red.svg" alt="" width="72" height="17"><span id="ver"></span></footer>
+  </main>
+</section>
 
+<!-- ================= Aba: Culto ================= -->
+<section id="tabSet" class="tab" hidden>
+  <header class="top">
+    <div class="top-row">
+      <button id="setLists" class="linkbtn" type="button"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>Minhas listas</button>
+      <button id="setMore" class="ib round" type="button" aria-label="Opções da lista"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.9" fill="currentColor"/><circle cx="12" cy="12" r="1.9" fill="currentColor"/><circle cx="19" cy="12" r="1.9" fill="currentColor"/></svg></button>
+    </div>
+    <button id="setName" class="big setname" type="button" aria-label="Renomear lista"></button>
+    <div id="setInfo" class="setinfo"></div>
+  </header>
+  <main class="wrap">
+    <button id="setPlay" class="play-big" type="button" hidden><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg><span>Começar o culto</span></button>
+    <ol id="setList" class="setlist"></ol>
+    <div id="setEmpty" class="empty set-empty" hidden>
+      <div class="empty-ic"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 15v6M15 18h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <p>A lista está vazia</p>
+      <span>Na aba <b>Louvores</b>, toque no <b class="plus-ic">+</b> ao lado de cada louvor para montar a lista do culto.</span>
+      <button id="setGo" class="btn" type="button">Escolher louvores</button>
+    </div>
+  </main>
+</section>
+
+<!-- ================= Barra de abas ================= -->
+<nav class="tabbar" id="tabbar" aria-label="Seções">
+  <button type="button" data-tab="songs" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6.8" cy="18" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.8" cy="16" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>Louvores</span></button>
+  <button type="button" data-tab="set" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor"/></svg><span>Culto</span><i id="setBadge" class="tb-badge" hidden></i></button>
+  <button type="button" data-tab="fav" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Favoritos</span></button>
+</nav>
+
+<!-- ================= Visualizador ================= -->
 <section id="viewer" class="viewer" hidden aria-modal="true" role="dialog" aria-labelledby="vName">
   <header class="vbar">
     <button id="vBack" class="ib" type="button" aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button id="vTitleBtn" class="vt" type="button" aria-label="Abrir menu"><span id="vName" class="vname"></span><span id="vSub" class="vsub"></span></button>
-    <button id="vMenu" class="ib" type="button" aria-label="Menu" aria-controls="drawer" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    <button id="vAdd" class="ib" type="button" aria-label="Adicionar à lista do culto"></button>
+    <button id="vMenu" class="ib" type="button" aria-label="Menu" aria-controls="drawer" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.9" fill="currentColor"/><circle cx="12" cy="12" r="1.9" fill="currentColor"/><circle cx="12" cy="19" r="1.9" fill="currentColor"/></svg></button>
   </header>
   <div id="pages" class="pages"></div>
   <div id="pageInd" class="page-ind" hidden></div>
+
+  <!-- barra de baixo: tom, tamanho, rolagem e navegação da lista -->
+  <div class="vdock" id="vdock">
+    <div class="vnav" id="vNav" hidden>
+      <button id="vPrev" class="vnav-b prev" type="button"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><small>Anterior</small><b id="vPrevT"></b></span></button>
+      <div class="vnav-pos" id="vPos"></div>
+      <button id="vNext" class="vnav-b next" type="button"><span><small>Próximo</small><b id="vNextT"></b></span><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="vtools" id="vTools">
+      <div class="vtg" id="qTom">
+        <button id="qTomDown" class="qb" type="button" aria-label="Meio tom abaixo">−</button>
+        <button id="qKey" class="qkey" type="button" aria-label="Escolher tom"><small>Tom</small><b id="qKeyV"></b></button>
+        <button id="qTomUp" class="qb" type="button" aria-label="Meio tom acima">+</button>
+      </div>
+      <div class="vtg">
+        <button id="qZOut" class="qb" type="button" aria-label="Diminuir letra"><span class="aa sm">A</span></button>
+        <button id="qZIn" class="qb" type="button" aria-label="Aumentar letra"><span class="aa">A</span></button>
+      </div>
+      <button id="qRoll" class="qb roll" type="button" aria-label="Rolagem automática"><svg viewBox="0 0 24 24"><path d="M12 4v14M6 12l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </div>
   <button id="scrollFab" class="fab" type="button" hidden aria-label="Parar rolagem"><svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+
   <div id="drawerBg" class="drawer-bg" hidden></div>
   <aside id="drawer" class="drawer" aria-label="Opções do louvor" aria-hidden="true">
     <div class="dh">
       <div class="dnum" id="dNum"></div>
       <div class="dtitle" id="dTitle"></div>
       <div class="dcol" id="dCol"></div>
+    </div>
+    <div class="dsec dbtns">
+      <button id="dAdd" class="dbtn primary" type="button"></button>
     </div>
     <div class="dsec" id="secDocs"><div class="dlab">Ver</div><div id="dDocs" class="dlist" role="tablist"></div></div>
     <div class="dsec" id="secTom">
@@ -82,10 +138,6 @@
       <div class="dlab">Partitura</div>
       <div class="dseg"><button type="button" data-m="1">Só melodia</button><button type="button" data-m="0">Grade completa</button></div>
     </div>
-    <div class="dsec dbtns" id="secEdit">
-      <button id="editBtn" class="dbtn dedit" type="button">✎ Editar acordes</button>
-      <button id="editUndo" class="dlink" type="button" hidden>Desfazer minhas alterações</button>
-    </div>
     <div class="dsec" id="secChords">
       <label class="dsw"><span>Mostrar acordes</span><input type="checkbox" id="optChords" checked><i></i></label>
     </div>
@@ -93,12 +145,18 @@
       <div class="dlab">Rolagem automática</div>
       <div class="drow"><button id="scrollBtn" class="dplay" type="button">▶ Rolar</button><input id="scrollSpeed" type="range" min="1" max="10" step="1" aria-label="Velocidade"></div>
     </div>
+    <div class="dsec dbtns" id="secEdit">
+      <button id="editBtn" class="dbtn" type="button">✎ Editar acordes</button>
+      <button id="editUndo" class="dlink" type="button" hidden>Desfazer minhas alterações</button>
+    </div>
     <div class="dsec dbtns">
       <button id="vStar" class="dbtn" type="button">☆ Favoritar</button>
       <button id="pasteBtn" class="dbtn" type="button">Colar uma cifra</button>
     </div>
   </aside>
 </section>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="data.js"></script>
 <script src="app.js"></script>

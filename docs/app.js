@@ -30,6 +30,7 @@
   DATA.forEach(function (d, i) {
     d.i = i; d.f = d.d[0][0];
     d.key = d.d[0][0] + ":" + (d.d[0][2] || 0);
+    d.sk = d.key + "|" + d.c + "|" + d.n + "|" + d.t;   // único (louvores repetidos dividem o mesmo arquivo)
     prep(d, d.t + " " + (d.a || []).join(" "), d.x);
     d.nt = norm(d.t); d.ct = d.nt.replace(/ /g, ""); d.tw = d.nt.split(" ").filter(Boolean);
     d.nums = [d.n].concat(d.m || []).map(function (n) {
@@ -176,6 +177,7 @@
   $("chips").addEventListener("click", function (e) {
     var b = e.target.closest(".chip"); if (!b) return;
     filter = b.getAttribute("data-f"); save("lv.filter", filter);
+    if (typeof curTab !== "undefined") { curTab = filter === "fav" ? "fav" : "songs"; document.querySelectorAll("#tabbar [data-tab]").forEach(function (x) { x.setAttribute("aria-selected", x.getAttribute("data-tab") === curTab); }); }
     renderChips(); run(); window.scrollTo(0, 0);
   });
 
@@ -187,26 +189,32 @@
     if (!d.n) return '<div class="badge none">' + NOTE + "</div>";
     var m = /^(CIA)\s*(\d+)$/i.exec(d.n);
     if (m) return '<div class="badge"><span><small>CIA</small>' + esc(m[2]) + "</span></div>";
-    return '<div class="badge">' + esc(d.n) + "</div>";
+    return '<div class="badge' + (d.n.length > 3 ? " long" : "") + '">' + esc(d.n) + "</div>";
   }
   function tagOf(d) {
-    if (d.hasCifra) return '<span class="tag cifra">Cifra</span>';
-    if (d.k === "letra") return '<span class="tag letra">Letra</span>';
-    if (d.k === "parte") return '<span class="tag parte">' + esc(d.d[0][1].split(" · ")[0]) + "</span>";
-    return '<span class="tag partitura">Partitura</span>';
+    if (d.hasCifra) return '<span class="tag t-cifra">Cifra</span>';
+    if (d.k === "letra") return '<span class="tag t-letra">Letra</span>';
+    if (d.k === "parte") return '<span class="tag t-parte">' + esc(d.d[0][1].split(" · ")[0]) + "</span>";
+    return '<span class="tag t-partitura">Partitura</span>';
   }
   function itemHTML(d, snip) {
     return '<li class="item" data-i="' + d.i + '">' + badge(d) +
       '<div class="info"><div class="title">' + esc(d.t) + '</div>' +
       '<div class="line2">' + tagOf(d) + '<span class="col">' + esc(d.cs) + "</span></div>" +
       (snip ? '<div class="snip">' + snip + "</div>" : "") + "</div>" +
-      (favs.indexOf(d.key) >= 0 ? STAR : "") + "</li>";
+      (favs.indexOf(d.key) >= 0 ? STAR : "") + addBtn(d) + "</li>";
+  }
+  var PLUS = '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>';
+  var CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function addBtn(d) {
+    var on = inSet(d);
+    return '<button class="add' + (on ? " on" : "") + '" type="button" data-add="' + d.i + '" aria-label="' + (on ? "Tirar da lista do culto" : "Adicionar à lista do culto") + '"><i>' + (on ? CHECK : PLUS) + "</i></button>";
   }
   function cadHTML(pg, snip) {
     var c = pg.cad;
     return '<li class="item" data-c="' + c.ci + '" data-p="' + (pg.page || 1) + '"><div class="badge cad">' + BOOK + "</div>" +
       '<div class="info"><div class="title">' + esc(c.t) + "</div>" +
-      '<div class="line2"><span class="tag ' + (c.k === "Cifra" ? "cifra" : c.k === "Letra" ? "letra" : "partitura") + '">' + esc(c.k) + "</span>" +
+      '<div class="line2"><span class="tag t-' + (c.k === "Cifra" ? "cifra" : c.k === "Letra" ? "letra" : "partitura") + '">' + esc(c.k) + "</span>" +
       '<span class="col">' + (pg.page ? "Página " + pg.page + " de " + c.p.length : c.p.length + " páginas") + "</span></div>" +
       (snip ? '<div class="snip">' + snip + "</div>" : "") + "</div></li>";
   }
@@ -271,6 +279,8 @@
       });
       $("meta").textContent = pool.length + " louvores" + (filter === "all" ? "" : " · " + f.label);
       $("empty").hidden = pool.length > 0;
+      $("empty").querySelector("p").textContent = filter === "fav" ? "Nenhum favorito ainda" : "Nenhum louvor encontrado";
+      $("empty").querySelector("span").textContent = filter === "fav" ? "Abra um louvor e toque em ☆ Favoritar no menu ⋮ para guardar aqui." : "Tente outra palavra, o número ou um trecho diferente da letra.";
       paint(rows); return;
     }
 
@@ -306,11 +316,13 @@
   });
   $("clear").addEventListener("click", function () { $("q").value = ""; run(); $("q").focus(); });
   $("list").addEventListener("click", function (e) {
+    var ab = e.target.closest("[data-add]");
+    if (ab) { e.stopPropagation(); toggleSet(DATA[+ab.getAttribute("data-add")]); return; }
     var li = e.target.closest(".item"); if (!li) return;
     if (li.hasAttribute("data-c")) {
       var c = CADS[+li.getAttribute("data-c")];
       openCad(c, +li.getAttribute("data-p") || 1);
-    } else open(DATA[+li.getAttribute("data-i")]);
+    } else { setPos = -1; open(DATA[+li.getAttribute("data-i")]); }
   });
 
   // ---------- Visualizador ----------
@@ -370,11 +382,13 @@
     else if (/^L\d+$/.test(di[0])) showLyrics(+di[0].slice(1));
     else loadPdf(di[0], di[2], di[3]);
     drawer();
+    $("vdock").classList.remove("hide");
+    dockUI();
   }
   function openCad(c, page) {
     cur = null; curDocs = [[c.id, c.k, 0, 0]]; curIdx = 0;
     $("vName").textContent = c.t; $("vSub").textContent = c.k + (page > 1 ? " · pág. " + page : "");
-    showViewer(); stopScroll(); loadPdf(c.id, 0, 0, page); drawer();
+    setPos = -1; showViewer(); stopScroll(); loadPdf(c.id, 0, 0, page); drawer(); dockUI();
   }
   function reset() {
     token++;
@@ -499,6 +513,7 @@
       return '<button type="button" data-k="' + i + '" class="' + (sel ? "on" : "") + (i === ok.i ? " orig" : "") + '">' + k + "</button>";
     }).join("");
     $("tomReset").hidden = !shift;
+    if (!$("viewer").hidden) dockUI();
   }
   $("tomUp").addEventListener("click", function () { setTom(cifraShift() + 1); });
   $("tomDown").addEventListener("click", function () { setTom(cifraShift() - 1); });
@@ -738,6 +753,7 @@
     if (d) $("vStar").textContent = favs.indexOf(d.key) >= 0 ? "★ Nos favoritos" : "☆ Favoritar";
     $("pasteBtn").textContent = d && myCifras[d.key] ? "Editar minha cifra" : "Colar uma cifra";
     tomUI();
+    drawerAdd();
   }
   function openDrawer() {
     drawer();
@@ -770,7 +786,7 @@
     $("viewer").addEventListener("touchstart", function (e) {
       if (e.touches.length !== 1) { from = null; return; }
       sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-      from = $("drawer").classList.contains("open") ? "open" : (sx > window.innerWidth - 24 ? "edge" : null);
+      from = $("drawer").classList.contains("open") ? "open" : (sx > window.innerWidth - 24 ? "edge" : (setPos >= 0 && !editing ? "mid" : null));
     }, { passive: true });
     $("viewer").addEventListener("touchend", function (e) {
       if (!from) return;
@@ -778,6 +794,10 @@
       if (Math.abs(dx) > 50 && Math.abs(dy) < 60) {
         if (from === "edge" && dx < 0) openDrawer();
         if (from === "open" && dx > 0) closeDrawer();
+        if (from === "mid" && Math.abs(dx) > 90 && Math.abs(dy) < 45) {
+          var pg = $("pages");
+          if (pg.scrollWidth <= pg.clientWidth + 4) { if (dx < 0) $("vNext").click(); else $("vPrev").click(); }
+        }
       }
       from = null;
     }, { passive: true });
@@ -789,7 +809,9 @@
     reset(); view = ""; curCifra = null;
     $("pages").innerHTML = "";
     keepAwake(false);
-    renderChips(); run();
+    setPos = -1;
+    if (!$("tabSet").hidden) renderSet(); else { renderChips(); run(); }
+    afterSetChange();
   }
   $("vBack").addEventListener("click", function () { history.back(); });
   window.addEventListener("popstate", function () { if (!$("viewer").hidden) closeViewer(); });
@@ -827,8 +849,8 @@
     }
     rollLast = ts; requestAnimationFrame(rollFrame);
   }
-  function startScroll() { rolling = true; rollLast = 0; rollAcc = 0; $("scrollFab").hidden = false; $("scrollBtn").textContent = "❚❚ Parar"; requestAnimationFrame(rollFrame); }
-  function stopScroll() { rolling = false; $("scrollFab").hidden = true; $("scrollBtn").textContent = "▶ Rolar"; }
+  function startScroll() { rolling = true; rollLast = 0; rollAcc = 0; $("scrollFab").hidden = false; $("scrollBtn").textContent = "❚❚ Parar"; $("vdock").classList.add("hide"); $("qRoll").classList.add("on"); requestAnimationFrame(rollFrame); }
+  function stopScroll() { rolling = false; $("scrollFab").hidden = true; $("scrollBtn").textContent = "▶ Rolar"; $("qRoll").classList.remove("on"); $("vdock").classList.remove("hide"); }
   $("scrollBtn").addEventListener("click", function () { if (rolling) stopScroll(); else { startScroll(); closeDrawer(); } });
   $("scrollFab").addEventListener("click", stopScroll);
   $("scrollSpeed").addEventListener("input", function () { scrollSpeed = +this.value; save("lv.speed", scrollSpeed); });
@@ -1080,8 +1102,287 @@
     window.addEventListener("online", function () { if (state.done < state.total) syncAll(); });
   } else pill();
 
+  // ---------- Lista do culto ----------
+  var BYKEY = {};
+  DATA.forEach(function (d) { BYKEY[d.sk] = d; });
+  function today() {
+    var d = new Date(), w = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][d.getDay()];
+    return "Culto de " + w.toLowerCase() + ", " + d.getDate() + "/" + (d.getMonth() + 1);
+  }
+  var setState = load("lv.sets", null);
+  if (!setState || !setState.lists || !setState.lists.length) {
+    setState = { cur: "s1", lists: [{ id: "s1", name: "Culto", items: [], t: Date.now() }] };
+  }
+  function curSet() {
+    var s = setState.lists.filter(function (x) { return x.id === setState.cur; })[0];
+    if (!s) { s = setState.lists[0]; setState.cur = s.id; }
+    s.items = s.items.filter(function (k) { return BYKEY[k]; });
+    return s;
+  }
+  function saveSets() { curSet().t = Date.now(); save("lv.sets", setState); }
+  function inSet(d) { return curSet().items.indexOf(d.sk) >= 0; }
+  function toggleSet(d, silent) {
+    var s = curSet(), i = s.items.indexOf(d.sk);
+    if (i >= 0) {
+      s.items.splice(i, 1); saveSets();
+      if (!silent) toast("Removido da lista", "Desfazer", function () { s.items.splice(Math.min(i, s.items.length), 0, d.sk); saveSets(); afterSetChange(); });
+    } else {
+      s.items.push(d.sk); saveSets();
+      if (!silent) toast("Adicionado à lista · " + s.items.length + "º louvor");
+      var b = $("setBadge"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+    }
+    afterSetChange();
+  }
+  function afterSetChange() {
+    var n = curSet().items.length, b = $("setBadge");
+    b.hidden = !n; b.textContent = n;
+    document.querySelectorAll("#list [data-add]").forEach(function (btn) {
+      var d = DATA[+btn.getAttribute("data-add")], on = inSet(d);
+      btn.classList.toggle("on", on); btn.innerHTML = "<i>" + (on ? CHECK : PLUS) + "</i>";
+      btn.setAttribute("aria-label", on ? "Tirar da lista do culto" : "Adicionar à lista do culto");
+    });
+    if (!$("tabSet").hidden) renderSet();
+    if (!$("viewer").hidden) { dockUI(); drawerAdd(); }
+  }
+
+  var toastT;
+  function toast(msg, act, fn) {
+    var t = $("toast");
+    t.innerHTML = "<span>" + esc(msg) + "</span>" + (act ? '<button type="button">' + esc(act) + "</button>" : "");
+    t.hidden = false; t.style.animation = "none"; void t.offsetWidth; t.style.animation = "";
+    if (act) t.querySelector("button").onclick = function () { t.hidden = true; fn(); };
+    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, act ? 4000 : 1800);
+  }
+
+  function keyLabel(d) {
+    var k = null;
+    d.d.some(function (x) {
+      if (/^C:/.test(x[0]) && CIFRAS[x[0].slice(2)]) { k = CIFRAS[x[0].slice(2)]; return true; }
+      return false;
+    });
+    if (!k) return "";
+    var ok = keyInfo(origKey(k)); if (!ok) return "";
+    return keyName(ok.i + (tons[d.key] || 0), ok.minor);
+  }
+  var HANDLE = '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/><circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/></svg>';
+  var XICON = '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+  function renderSet() {
+    var s = curSet();
+    $("setName").textContent = s.name;
+    var n = s.items.length;
+    $("setInfo").textContent = n ? n + (n === 1 ? " louvor" : " louvores") + " · toque para abrir, arraste ⠿ para mudar a ordem" : "";
+    $("setPlay").hidden = !n; $("setEmpty").hidden = !!n;
+    $("setList").innerHTML = s.items.map(function (k, i) {
+      var d = BYKEY[k], kl = keyLabel(d);
+      return '<li class="si" data-k="' + esc(k) + '">' +
+        '<button class="si-handle" type="button" aria-label="Arrastar para mudar a ordem">' + HANDLE + "</button>" +
+        '<div class="si-n">' + (i + 1) + "</div>" +
+        '<button class="si-main" type="button" data-open="' + i + '"><div class="si-t">' + esc(d.t) + "</div>" +
+        '<div class="si-s">' + (kl ? '<span class="k">' + esc(kl) + "</span>" : "") + "<span>" + esc((d.n ? d.n + " · " : "") + d.c) + "</span></div></button>" +
+        '<button class="si-x" type="button" data-rm="' + i + '" aria-label="Tirar da lista">' + XICON + "</button></li>";
+    }).join("");
+  }
+  $("setList").addEventListener("click", function (e) {
+    var o = e.target.closest("[data-open]"), r = e.target.closest("[data-rm]");
+    if (o) openFromSet(+o.getAttribute("data-open"));
+    if (r) toggleSet(BYKEY[curSet().items[+r.getAttribute("data-rm")]]);
+  });
+  $("setPlay").addEventListener("click", function () { openFromSet(0); });
+  $("setGo").addEventListener("click", function () { showTab("songs"); setTimeout(function () { $("q").focus(); }, 50); });
+
+  // arrastar para reordenar (pelo ⠿)
+  (function dragSort() {
+    var box = $("setList"), el = null, sy = 0, start = 0, h = 0, rows = [], to = 0;
+    box.addEventListener("pointerdown", function (e) {
+      var hd = e.target.closest(".si-handle"); if (!hd) return;
+      e.preventDefault();
+      el = hd.closest(".si"); rows = Array.prototype.slice.call(box.children);
+      start = to = rows.indexOf(el); sy = e.clientY; h = el.offsetHeight + 8;
+      el.classList.add("drag"); hd.setPointerCapture(e.pointerId);
+      if (navigator.vibrate) navigator.vibrate(8);
+    });
+    box.addEventListener("pointermove", function (e) {
+      if (!el) return;
+      var dy = e.clientY - sy;
+      el.style.transform = "translateY(" + dy + "px) scale(1.02)";
+      to = Math.max(0, Math.min(rows.length - 1, start + Math.round(dy / h)));
+      rows.forEach(function (r, i) {
+        if (r === el) return;
+        var shift = (i > start && i <= to) ? -h : (i < start && i >= to) ? h : 0;
+        r.style.transform = shift ? "translateY(" + shift + "px)" : "";
+      });
+    });
+    function end() {
+      if (!el) return;
+      rows.forEach(function (r) { r.style.transform = ""; });
+      el.classList.remove("drag");
+      if (to !== start) {
+        var it = curSet().items, k = it.splice(start, 1)[0]; it.splice(to, 0, k); saveSets();
+      }
+      el = null; renderSet();
+    }
+    box.addEventListener("pointerup", end); box.addEventListener("pointercancel", end);
+  })();
+
+  function setSheet(html, onClick) {
+    var bg = document.createElement("div"); bg.className = "sheet-bg";
+    bg.innerHTML = '<div class="sheet" role="dialog">' + html + "</div>";
+    document.body.appendChild(bg);
+    bg.addEventListener("click", function (e) { if (e.target === bg) bg.remove(); else onClick(e, bg); });
+    return bg;
+  }
+  function renameSet(isNew) {
+    var s = curSet();
+    var bg = setSheet("<h2>" + (isNew ? "Nova lista" : "Nome da lista") + '</h2><input class="field" id="setNameIn" maxlength="60" value="' + esc(isNew ? today() : s.name) + '">' +
+      '<div class="act"><button class="btn ghost" data-a="x">Cancelar</button><button class="btn" data-a="ok">' + (isNew ? "Criar" : "Salvar") + "</button></div>", function (e, bg) {
+      var a = e.target.getAttribute("data-a");
+      if (a === "x") bg.remove();
+      if (a === "ok") {
+        var v = bg.querySelector("#setNameIn").value.trim() || "Culto";
+        if (isNew) { var id = "s" + Date.now(); setState.lists.unshift({ id: id, name: v, items: [], t: Date.now() }); setState.cur = id; }
+        else s.name = v;
+        saveSets(); bg.remove(); renderSet(); afterSetChange();
+      }
+    });
+    var inp = bg.querySelector("#setNameIn");
+    setTimeout(function () { inp.focus(); inp.select(); }, 60);
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") bg.querySelector('[data-a="ok"]').click(); });
+  }
+  $("setName").addEventListener("click", function () { renameSet(false); });
+  $("setLists").addEventListener("click", function () {
+    var html = "<h2>Minhas listas</h2><div class=\"lists\">" + setState.lists.slice().sort(function (a, b) { return b.t - a.t; }).map(function (l) {
+      return '<button type="button" data-id="' + l.id + '" class="' + (l.id === setState.cur ? "on" : "") + '"><span><b>' + esc(l.name) + "</b><small>" +
+        (l.items.length ? esc(l.items.slice(0, 3).map(function (k) { return BYKEY[k] ? BYKEY[k].t : ""; }).join(", ")) + (l.items.length > 3 ? "…" : "") : "vazia") +
+        '</small></span><span class="lc">' + l.items.length + "</span></button>";
+    }).join("") + '</div><div class="act"><button class="btn" data-a="new">＋ Nova lista</button></div>';
+    setSheet(html, function (e, bg) {
+      var b = e.target.closest("[data-id]");
+      if (b) { setState.cur = b.getAttribute("data-id"); save("lv.sets", setState); bg.remove(); renderSet(); afterSetChange(); }
+      if (e.target.getAttribute("data-a") === "new") { bg.remove(); renameSet(true); }
+    });
+  });
+  function shareText() {
+    var s = curSet();
+    return s.name + "\n\n" + s.items.map(function (k, i) {
+      var d = BYKEY[k], kl = keyLabel(d);
+      return (i + 1) + ". " + (d.n ? d.n + " – " : "") + d.t + (kl ? " (tom " + kl + ")" : "");
+    }).join("\n");
+  }
+  $("setMore").addEventListener("click", function () {
+    var I = function (p) { return '<svg viewBox="0 0 24 24">' + p + "</svg>"; };
+    setSheet("<h2>" + esc(curSet().name) + '</h2><div class="menu-list">' +
+      '<button data-a="share">' + I('<path d="M12 15V4M8 8l4-4 4 4M5 12v7h14v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>') + "Compartilhar lista</button>" +
+      '<button data-a="ren">' + I('<path d="M4 20h4L19 9l-4-4L4 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>') + "Renomear</button>" +
+      '<button data-a="new">' + I('<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>') + "Nova lista</button>" +
+      '<button data-a="clr" class="danger">' + I('<path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>') + "Esvaziar lista</button>" +
+      (setState.lists.length > 1 ? '<button data-a="del" class="danger">' + I('<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>') + "Apagar esta lista</button>" : "") +
+      '</div><div class="act"><button class="btn ghost" data-a="x">Fechar</button></div>', function (e, bg) {
+      var a = (e.target.closest("[data-a]") || {}).getAttribute ? e.target.closest("[data-a]").getAttribute("data-a") : null;
+      if (!a) return;
+      bg.remove();
+      var s = curSet();
+      if (a === "share") {
+        var txt = shareText();
+        if (navigator.share) navigator.share({ title: s.name, text: txt }).catch(function () {});
+        else if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast("Lista copiada"); });
+      }
+      if (a === "ren") renameSet(false);
+      if (a === "new") renameSet(true);
+      if (a === "clr" && s.items.length) {
+        var old = s.items.slice(); s.items = []; saveSets(); afterSetChange();
+        toast("Lista esvaziada", "Desfazer", function () { s.items = old; saveSets(); afterSetChange(); });
+      }
+      if (a === "del") {
+        setState.lists = setState.lists.filter(function (x) { return x !== s; });
+        setState.cur = setState.lists[0].id; save("lv.sets", setState); afterSetChange(); renderSet();
+      }
+    });
+  });
+
+  // ---------- Abas ----------
+  var curTab = "songs";
+  function showTab(t) {
+    var prevFilter = filter;
+    if (t === "fav") { filter = "fav"; save("lv.filter", filter); }
+    else if (t === "songs" && curTab === "fav") { filter = "all"; save("lv.filter", filter); }
+    curTab = t;
+    $("tabSongs").hidden = t === "set"; $("tabSet").hidden = t !== "set";
+    document.querySelectorAll("#tabbar [data-tab]").forEach(function (b) { b.setAttribute("aria-selected", b.getAttribute("data-tab") === t); });
+    if (t === "set") renderSet();
+    else if (filter !== prevFilter || t === "fav") { renderChips(); run(); }
+    window.scrollTo(0, 0);
+  }
+  $("tabbar").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-tab]"); if (!b) return;
+    var t = b.getAttribute("data-tab");
+    if (t === curTab && t === "songs") { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    showTab(t);
+  });
+
+  // ---------- Visualizador: barra de baixo e navegação da lista ----------
+  var setPos = -1;
+  function openFromSet(i) {
+    var s = curSet(); if (!s.items[i]) return;
+    setPos = i; open(BYKEY[s.items[i]]);
+    $("pages").scrollTop = 0;
+  }
+  function dockUI() {
+    var s = curSet(), nav = setPos >= 0 && cur && s.items[setPos] === cur.sk;
+    if (!nav && cur && setPos >= 0) setPos = s.items.indexOf(cur.sk);
+    nav = setPos >= 0 && cur;
+    $("vNav").hidden = !nav;
+    if (nav) {
+      var p = BYKEY[s.items[setPos - 1]], n = BYKEY[s.items[setPos + 1]];
+      $("vPrev").disabled = !p; $("vNext").disabled = !n;
+      $("vPrevT").textContent = p ? p.t : "—"; $("vNextT").textContent = n ? n.t : "Fim da lista";
+      $("vPos").textContent = (setPos + 1) + " de " + s.items.length;
+    }
+    var ok = view === "cifra" && curCifra && keyInfo(origKey(curCifra));
+    $("qTom").hidden = !ok;
+    if (ok) $("qKeyV").textContent = keyName(ok.i + cifraShift(), ok.minor);
+    $("vAdd").hidden = !cur;
+    if (cur) $("vAdd").innerHTML = inSet(cur)
+      ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="currentColor"/><path d="M7.5 12.3l3 3 6-6.3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+    $("qRoll").classList.toggle("on", rolling);
+  }
+  function drawerAdd() {
+    if (!cur) { $("dAdd").parentNode.hidden = true; return; }
+    $("dAdd").parentNode.hidden = false;
+    var on = inSet(cur);
+    $("dAdd").textContent = on ? "✓ Na lista do culto — tirar" : "＋ Adicionar à lista do culto";
+    $("dAdd").classList.toggle("on", on);
+  }
+  $("vAdd").addEventListener("click", function () { if (cur) toggleSet(cur); });
+  $("dAdd").addEventListener("click", function () { if (cur) toggleSet(cur); });
+  $("vPrev").addEventListener("click", function () { if (setPos > 0) openFromSet(setPos - 1); });
+  $("vNext").addEventListener("click", function () { if (setPos < curSet().items.length - 1) openFromSet(setPos + 1); });
+  $("qTomUp").addEventListener("click", function () { setTom(cifraShift() + 1); });
+  $("qTomDown").addEventListener("click", function () { setTom(cifraShift() - 1); });
+  $("qKey").addEventListener("click", openDrawer);
+  $("qZIn").addEventListener("click", function () { $("zIn").click(); });
+  $("qZOut").addEventListener("click", function () { $("zOut").click(); });
+  $("qRoll").addEventListener("click", function () { if (rolling) stopScroll(); else startScroll(); });
+  // toque no conteúdo mostra/esconde a barra de baixo; rolar para baixo esconde
+  (function dockAuto() {
+    var lastY = 0, moved = 0;
+    $("pages").addEventListener("scroll", function () {
+      var y = $("pages").scrollTop, dy = y - lastY; lastY = y;
+      if (rolling) return;
+      moved += dy;
+      if (moved > 60) { $("vdock").classList.add("hide"); moved = 0; }
+      else if (moved < -40 || y < 20) { $("vdock").classList.remove("hide"); moved = 0; }
+    }, { passive: true });
+    $("pages").addEventListener("click", function (e) {
+      if (editing || e.target.closest("button, a, .sg[data-l]")) return;
+      $("vdock").classList.toggle("hide");
+    });
+  })();
+
   // ---------- Início ----------
   $("ver").textContent = "v" + (window.DATA_VERSION || "").slice(0, 6);
+  if (filter === "fav") filter = "all";
   renderChips();
   run();
+  afterSetChange();
 })();
