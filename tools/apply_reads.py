@@ -36,6 +36,7 @@ def read_free(img):
 # pedaços: acordes grudados ("G/B C") viram dois
 parts = []   # (pg, x0, y0, x1, y1, leitura, confiável)
 part_tok = []
+ROWSPLIT = set()   # 2ª linha de uma introdução em duas linhas: vira linha só de acordes
 import os
 PROP = json.load(open("tk/propagated.json")) if os.path.exists("tk/propagated.json") else {}
 MANUAL = json.load(open("tk/manual.json")) if os.path.exists("tk/manual.json") else {}
@@ -49,6 +50,19 @@ for i in range(N):
     if str(i) in PROP: reading, trusted = PROP[str(i)][0], True
     if str(i) in MANUAL: reading, trusted = MANUAL[str(i)], True     # conferido à mão na imagem
     part_tok_cur = i
+    lab_ = MANUAL.get(str(i), "")
+    if lab_.startswith("v:"):                       # acorde de baixo ligado ao '|' do verso de cima: só a parte de baixo
+        y0 = max(y0, y1 - 32); MANUAL[str(i)] = lab_ = lab_[2:]
+    if "^" in lab_ or " / " in lab_:                # duas linhas de acordes no mesmo recorte
+        rows_ = lab_.split(" / ") if " / " in lab_ else lab_.split("^")
+        hh = (y1 - y0) / len(rows_)
+        for r_, txt in enumerate(rows_):
+            labs = txt.split(); ry0 = int(y0 + r_ * hh); ry1 = int(y0 + (r_ + 1) * hh)
+            for k_, lb in enumerate(labs):
+                parts.append((pg, x0 + int((x1 - x0) * k_ / len(labs)), ry0, x0 + int((x1 - x0) * (k_ + 1) / len(labs)) - 2, ry1, to_site(lb), True)); part_tok.append(i)
+                if r_ >= 1: ROWSPLIT.add(len(parts) - 1)
+        nsplit += 1
+        continue
     if str(i) in MANUAL and " " in MANUAL[str(i)].strip():
         labs = MANUAL[str(i)].split()
         sc_px = (y1 - y0) / 32.0
@@ -101,6 +115,7 @@ bypg = collections.defaultdict(list)
 for k, p in enumerate(parts): bypg[p[0]].append(k)
 out = open("n2/all_fixed.jsonl", "w")
 UNC = []
+USED_ALL = set()
 st = collections.Counter()
 for l in open("n2/all.jsonl"):
     r = json.loads(l); pg = r["page"]; cand = bypg.get(pg, [])
@@ -118,7 +133,8 @@ for l in open("n2/all.jsonl"):
                         if not (-8 <= chy - py1 <= 50 and abs(px0 - x) <= 30): continue
                         d = abs(px0 - x) + abs(chy - py1)
                     else:
-                        if not (py0 - 25 <= row["y"] <= py1 + 25 and abs(px0 - x) <= 40): continue
+                        same_line = (abs(py1 - row["y1"]) <= 10) if row.get("y1") else (abs(py0 - row["y"]) <= 22)
+                        if not (same_line and abs(px0 - x) <= 40): continue
                         d = abs(px0 - x) + abs(row["y"] - py0)
                     if d < bd: best, bd = k, d
                 if best is not None and parts[best][5]:
@@ -138,7 +154,7 @@ for l in open("n2/all.jsonl"):
                 for k in SIB.get(tok, []):
                     if k in used: continue
                     _, px0, py0, px1, py1, rd, tr = parts[k]
-                    if not rd: continue
+                    if not rd or abs(py0 - b[2]) > 6: continue      # só irmãos da mesma linha
                     used.add(k)
                     newl = [e for e in newl if not (not str(e[1]).startswith("!") and abs(e[0] - (px0 + 3)) < 25)]
                     newl.append([px0 + 3, "!" + rd]); st["acorde de recorte múltiplo"] += 1
@@ -179,18 +195,29 @@ for l in open("n2/all.jsonl"):
         ok_rows = [row for row in lyr if row["col"] == (0 if px0 < (r.get("W", 1838) / 2) else 1) or True]
         # 1) mesma linha de acordes de outro verso (altura igual à dos acordes já ligados a ele)
         same = [row for row in lyr if any(abs(y - py0) <= 14 for y in tok_y.get(id(row), []))
-                and min(w[1] for w in row["words"]) - 60 <= px0 <= max(w[2] for w in row["words"]) + 120]
+                and min(w[1] for w in row["words"]) - 60 <= px0 <= max(w[2] for w in row["words"]) + 500]
         # 2) senão, o verso logo abaixo do acorde
         rows = same or [row for row in lyr if -12 < row["y"] - py1 < 70
                 and min(w[1] for w in row["words"]) - 40 <= px0 <= max(w[2] for w in row["words"]) + 60]
+        if k in ROWSPLIT: rows = []
         if tr and rows:
             row = min(rows, key=lambda row: abs(row["y"] - py1))
             row.setdefault("chords", []).append([px0 + 3, "!" + rd])
             row["chords"].sort(key=lambda c: c[0])
             if row.get("chy") is None: row["chy"] = row["y"]
             st["órfão encaixado"] += 1
+        elif tr:
+            # sem verso: vira uma linha só de acordes naquela altura (introdução, interlúdio, fim de verso)
+            col = 0 if px0 < r.get("W", 1838) / 2 else 1
+            row = next((rw for rw in r["rows"] if not rw.get("words") and rw.get("col") == col and abs(rw["y"] - py0) <= 15 and rw.get("_orf")), None)
+            if row is None:
+                row = {"y": py0, "words": [], "text": "", "chords": [], "inline": [], "col": col, "_orf": True}
+                r["rows"].append(row)
+            row["inline"].append([px0, "!" + rd]); row["inline"].sort(key=lambda e: e[0])
+            st["órfão em linha de acordes"] += 1
         else:
             r["orphans"].append(parts[k][1:])
+    USED_ALL.update(part_tok[k] for k in used)
     # leituras antigas do OCR sem recorte correspondente: duplicatas de acordes de outros versos -> fora
     for row in r["rows"]:
         for key in ("chords", "inline"):
@@ -204,3 +231,4 @@ print(dict(st))
 
 json.dump(UNC, open("tk/uncertain_used.json", "w"))
 print("incertos usados nas cifras:", len(UNC))
+json.dump(sorted(USED_ALL), open("tk/used_tokens.json", "w"))

@@ -1,0 +1,1016 @@
+{
+ "118|44|i:Introdução: [F#9] [B7] [Em] [Em/D] [A/C#] [A] [C/D] [D7(b9)]": {
+  "old": [
+   "i:Introdução: [F#9] [B7] [Em] [Em/D] [A/C#] [A] [C/D] [D7(b9)]"
+  ],
+  "new": [
+   "i:Introdução: [F#ø] [B7] [Em] [Em/D] [A/C#] [A] [C/D] [D7(b9)]"
+  ]
+ },
+ "242|91|i:Instrumentos: [Dm] [D#°] [C/G] [Bb7] [A7] [A7M(9)] [A7]": {
+  "old": [
+   "i:Instrumentos: [Dm] [D#°] [C/G] [Bb7] [A7] [A7M(9)] [A7]",
+   "a:[Dm] [G] [C] [F] [C]"
+  ],
+  "new": [
+   "i:Instrumentos: [Dm] [D#°] [C/G] [Bb7] [A7] [A7(#5)] [A7]",
+   "a:[Dm] [G] [C] [F] [C]"
+  ]
+ },
+ "251|95|i:Instrumentos: [G7] [C] [C] [D] [Bm] [Em] [C] [G/B] [Am7]": {
+  "old": [
+   "i:Instrumentos: [G7] [C] [C] [D] [Bm] [Em] [C] [G/B] [Am7]",
+   "a:[G] [C] [D]",
+   "a:[D]"
+  ],
+  "new": [
+   "i:Instrumentos: [G7] [C] [D] [Bm] [Em] [C] [G/B] [Am7]",
+   "a:[D] [G] [C] [D]"
+  ]
+ },
+ "260|98|i:Instrumentos: [C] [Fm] [C] [Fm/C] [Eb] [Ab] [Eb] [Ab]": {
+  "old": [
+   "i:Instrumentos: [C] [Fm] [C] [Fm/C] [Eb] [Ab] [Eb] [Ab]"
+  ],
+  "new": [
+   "i:Instrumentos: [C] [Fm] [C] [Fm] [C] [Eb] [Ab] [Eb] [Ab]",
+   "a:[C] [Dm] [G] [C] [C7]"
+  ]
+ },
+ "267|101|i:Instrumentos: [C/E] [F] [F] [C/E] [Dm] [C/E] [F] [C/E]": {
+  "old": [
+   "i:Instrumentos: [C/E] [F] [F] [C/E] [Dm] [C/E] [F] [C/E]",
+   "a:[A7] [Dm] [A7]",
+   "a:[Dm]"
+  ],
+  "new": [
+   "i:Instrumentos: [C/E] [F] [C/E] [Dm] [C/E] [F] [C/E]",
+   "a:[Dm] [A7] [Dm] [A7]"
+  ]
+ },
+ "267|101|i:Instrumentos: [C/E] [F] [F] [C/E] [Dm] [C/E] [F] [C/E] [Dm]": {
+  "old": [
+   "i:Instrumentos: [C/E] [F] [F] [C/E] [Dm] [C/E] [F] [C/E] [Dm]",
+   "a:[Dm] [A7]",
+   "a:[A7]"
+  ],
+  "new": [
+   "i:Instrumentos: [C/E] [F] [C/E] [Dm] [C/E] [F] [C/E]",
+   "a:[Dm] [A7] [Dm] [A7]"
+  ]
+ },
+ "275|104|i:Instrumentos: [Am] [Bm] [C] [D]": {
+  "old": [
+   "i:Instrumentos: [Am] [Bm] [C] [D]",
+   "a:[F#m]"
+  ],
+  "new": [
+   "i:Instrumentos: [Am] [Bm] [C] [D]"
+  ]
+ },
+ "285|108|i:Introdução: [A#7M] [Dm/A] [A7M] [Dm/A]": {
+  "old": [
+   "i:Introdução: [A#7M] [Dm/A] [A7M] [Dm/A]"
+  ],
+  "new": [
+   "i:Introdução: [A7M] [Dm/A] [A7M] [Dm/A]"
+  ]
+ },
+ "285|108|i:Instrumentos: [A7M] [Dm/A] [A7M] [Dm/A] [A7M]": {
+  "old": [
+   "i:Instrumentos: [A7M] [Dm/A] [A7M] [Dm/A] [A7M]"
+  ],
+  "new": [
+   "i:Instrumentos: [A7M] [Dm/A] [A7M] [Dm/A]"
+  ]
+ },
+ "297|114|i:Introdução: [A7M] [F#m] [D7M] [Bm] [E] [A7M] [F#m]": {
+  "old": [
+   "i:Introdução: [A7M] [F#m] [D7M] [Bm] [E] [A7M] [F#m]",
+   "a:[E] [A7M] [D7M] [A7M] [D7M]",
+   "a:[Bm] [E] [A]"
+  ],
+  "new": [
+   "i:Introdução: [A7M] [F#m] [D7M] [Bm] [E] [A7M] [F#m]",
+   "a:[Bm] [E] [A7M] [D7M] [A7M] [D7M]",
+   "a:[Bm] [E] [A]"
+  ]
+ },
+ "303|116|i:Introdução: [A7M] [E/G#] [F#m] [F#m/E] [D7M]": {
+  "old": [
+   "i:Introdução: [A7M] [E/G#] [F#m] [F#m/E] [D7M]"
+  ],
+  "new": [
+   "i:Introdução: [A7M] [E/G#] [F#m] [F#m/E] [D7M]",
+   "a:[A/C#] [Bm7] [D/E] [A7M] [D/E]"
+  ]
+ },
+ "363|138|i:Instrumentos: [A] [B] [C#m] [B/Db]": {
+  "old": [
+   "i:Instrumentos: [A] [B] [C#m] [B/Db]"
+  ],
+  "new": [
+   "i:Instrumentos: [A] [B] [C#m] [B/D#]"
+  ]
+ },
+ "399|153|i:Introdução: [F#m] [E] [E] [B] [D] [C#7(sus4)] [C#] [D] [E/D]": {
+  "old": [
+   "i:Introdução: [F#m] [E] [E] [B] [D] [C#7(sus4)] [C#] [D] [E/D]",
+   "a:[C#m] [F#m] [A]"
+  ],
+  "new": [
+   "i:Introdução: [F#m] [E] [B] [D] [C#7(sus4)] [C#] [D] [E/D]",
+   "a:[C#m] [F#m] [D] [E] [A] [E] [A]"
+  ]
+ },
+ "473|182|i:Introdução: [Ab] [Db9/F] [F] [Ab] [Ab] [Db] [Db9] [Em]": {
+  "old": [
+   "i:Introdução: [Ab] [Db9/F] [F] [Ab] [Ab] [Db] [Db9] [Em]",
+   "a:[Ab/Eb] [Eb] [Ab]",
+   "a:[Eb] [Db9] [Db/Ab]"
+  ],
+  "new": [
+   "i:Introdução: [Ab] [Db9/F] [Ab] [Db] [Db9] [Fm]",
+   "a:[Eb] [Db9] [Ab/Eb] [Eb] [Ab] [Db/Ab]"
+  ]
+ },
+ "474|182|i:Introdução: [Eb] [Ab/Eb] [Eb] [Eb] [Ab/Eb] [Fm7] [Db]": {
+  "old": [
+   "i:Introdução: [Eb] [Ab/Eb] [Eb] [Eb] [Ab/Eb] [Fm7] [Db]",
+   "a:[Bb7/Eb]",
+   "a:[Db/C] [Bb]"
+  ],
+  "new": [
+   "i:Introdução: [Eb] [Ab/Eb] [Eb] [Ab/Eb] [Fm7] [Db]",
+   "a:[Db/C] [Bb] [Bb7/Eb]"
+  ]
+ },
+ "565|221|i:Instrumentos: [D] [G] [G] [D] [A] [D] [G] [D] [A] [F#m] [Bm]": {
+  "old": [
+   "i:Instrumentos: [D] [G] [G] [D] [A] [D] [G] [D] [A] [F#m] [Bm]",
+   "a:[E] [A] [D]"
+  ],
+  "new": [
+   "i:Instrumentos: [D] [G] [D] [A] [D] [G] [D] [A] [F#m] [Bm]",
+   "a:[F#m] [Bm] [G] [Em] [E] [A] [D]"
+  ]
+ },
+ "604|238|i:Introdução: [Eb9] [A7] [Dm] [Dm/C] [Bb7M] [A7(b13)] [A7] [Dm]": {
+  "old": [
+   "i:Introdução: [Eb9] [A7] [Dm] [Dm/C] [Bb7M] [A7(b13)] [A7] [Dm]"
+  ],
+  "new": [
+   "i:Introdução: [Eø] [A7] [Dm] [Dm/C] [Bb7M] [A7(b13)] [A7] [Dm]"
+  ]
+ },
+ "621|243|i:Instrumentos: [D] [D] [D9/F#] [G] [D9/F#] [G] [D] [E] [G] [D] [E/D]": {
+  "old": [
+   "i:Instrumentos: [D] [D] [D9/F#] [G] [D9/F#] [G] [D] [E] [G] [D] [E/D]"
+  ],
+  "new": [
+   "i:Instrumentos: [D] [D9/F#] [G] [D9/F#] [G] [D] [E/D]",
+   "a:[A/C#] [G/A] [A] [D9]"
+  ]
+ },
+ "627|245|i:Instrumentos: [E] [B/E] [A/E] [B/E] [E] [B/E]": {
+  "old": [
+   "i:Instrumentos: [E] [B/E] [A/E] [B/E] [E] [B/E]"
+  ],
+  "new": [
+   "i:Instrumentos: [E] [B/E] [A/E] [B/E] [E] [B/E]",
+   "a:[A/E] [B/E] [E] [Esus4] [E]"
+  ]
+ },
+ "651|254|i:Instrumentos: [C/E] [D/F#] [C/E] [D/F#]": {
+  "old": [
+   "i:Instrumentos: [C/E] [D/F#] [C/E] [D/F#]"
+  ],
+  "new": [
+   "i:Instrumentos: [C/E] [D/F#] [C/E] [D/F#]",
+   "a:[C/E] [Em] [D/F#]"
+  ]
+ },
+ "651|254|i:Instrumentos: [C/E] [D/F#] [C/E] [D/F#] [C/E] [Em]": {
+  "old": [
+   "i:Instrumentos: [C/E] [D/F#] [C/E] [D/F#] [C/E] [Em]"
+  ],
+  "new": [
+   "i:Instrumentos: [C/E] [D/F#] [C/E] [D/F#]",
+   "a:[C/E] [Em] [D/F#]"
+  ]
+ },
+ "660|258|i:Instrumentos: [D] [F#m] [G] [G] [A] [D] [F#m] [G]": {
+  "old": [
+   "i:Instrumentos: [D] [F#m] [G] [G] [A] [D] [F#m] [G]",
+   "a:[F#m] [G] [A]",
+   "a:[A] [D]"
+  ],
+  "new": [
+   "i:Instrumentos: [D] [F#m] [G] [A] [D] [F#m] [G]",
+   "a:[A] [D] [F#m] [G] [A]"
+  ]
+ },
+ "700|278|i:Instrumentos: [C7M(9)] [Em/B] [Em/B] [Am] [Am] [G] [F] [Dm] [Dm/F]": {
+  "old": [
+   "i:Instrumentos: [C7M(9)] [Em/B] [Em/B] [Am] [Am] [G] [F] [Dm] [Dm/F]",
+   "a:[Em/B] [Am] [Am/G] [D7/F#]"
+  ],
+  "new": [
+   "i:Instrumentos: [C7M(9)] [Em/B] [Am] [Am] [G] [F] [Dm] [Dm/C]",
+   "a:[Gsus4] [G] [G/F] [C/B] [Em/B] [Am] [Am/G] [D7/F#] [G#°] [G]"
+  ]
+ },
+ "8|348|i:Introdução: [C7M] [D] [Bm7] [Em] [Am] [Am/D] [D]": {
+  "old": [
+   "i:Introdução: [C7M] [D] [Bm7] [Em] [Am] [Am/D] [D]"
+  ],
+  "new": [
+   "i:Introdução: [C7M] [D] [Bm7] [Em] [Am] [Am/G] [D]"
+  ]
+ },
+ "9|349|i:Introdução: [Am] [G] [F] [Em] [Dm] [Dm/C] [Dm/C] [Bb] [G]": {
+  "old": [
+   "i:Introdução: [Am] [G] [F] [Em] [Dm] [Dm/C] [Dm/C] [Bb] [G]",
+   "a:[Gsus4] [G7]",
+   "a:[Dm]"
+  ],
+  "new": [
+   "i:Introdução: [Am] [G] [F] [Em] [Dm] [Dm/C] [Bb] [G]",
+   "a:[Am] [G] [F] [Em] [Dm] [Gsus4] [G7]"
+  ]
+ },
+ "10|349|i:Introdução: [E] [D] [A/C#] [F#m] [G#m] [A] [B]": {
+  "old": [
+   "i:Introdução: [E] [D] [A/C#] [F#m] [G#m] [A] [B]",
+   "a:[D] [E]"
+  ],
+  "new": [
+   "i:Introdução: [E] [D] [A/C#] [F#m] [G#m] [A] [B]",
+   "a:[C] [D] [E]"
+  ]
+ },
+ "122|383|i:Introdução: [A] [G] [D/F#] [D/F#] [Em7] [D] [C6] [B7(b9)] [Em7]": {
+  "old": [
+   "i:Introdução: [A] [G] [D/F#] [D/F#] [Em7] [D] [C6] [B7(b9)] [Em7]",
+   "a:[G7M] [A6] [D]",
+   "a:[D/F#]"
+  ],
+  "new": [
+   "i:Introdução: [A] [G] [D/F#] [Em7] [D] [C6] [B7(b9)] [Em7]",
+   "a:[D/F#] [G7M] [A6] [D]"
+  ]
+ },
+ "147|392|i:Instrumentos: [A] [E/G#] [F#m] [C#m] [A] [E/G#] [D]": {
+  "old": [
+   "i:Instrumentos: [A] [E/G#] [F#m] [C#m] [A] [E/G#] [D]"
+  ],
+  "new": [
+   "i:Instrumentos: [A] [E/G#] [F#m] [C#m] [A] [E/G#] [D]",
+   "a:[A/B] [B] [E] [B7]"
+  ]
+ },
+ "205|411|i:Introdução: [D] [D] [D6] [D] [D6] [Bm] [A] [G] [D/F#] [Em]": {
+  "old": [
+   "i:Introdução: [D] [D] [D6] [D] [D6] [Bm] [A] [G] [D/F#] [Em]",
+   "a:[D/F#] [G] [G#°]",
+   "a:[A]"
+  ],
+  "new": [
+   "i:Introdução: [D] [D6] [D] [D6] [Bm] [A] [G] [D/F#] [Em]",
+   "a:[D/F#] [G] [G#°] [A]"
+  ]
+ },
+ "205|411|i:Instrumentos: [D] [D6] [D] [D6] [Bm] [A] [G] [D/F#]": {
+  "old": [
+   "i:Instrumentos: [D] [D6] [D] [D6] [Bm] [A] [G] [D/F#]"
+  ],
+  "new": [
+   "i:Instrumentos: [D] [D6] [D] [D6] [Bm] [A] [G] [D/F#]",
+   "a:[Em] [D/F#] [G] [G#°] [A]"
+  ]
+ },
+ "206|412|i:Instrumentos: [C] [F] [G] [E7(b9)] [Am7] [G] [F] [G] [F]": {
+  "old": [
+   "i:Instrumentos: [C] [F] [G] [E7(b9)] [Am7] [G] [F] [G] [F]"
+  ],
+  "new": [
+   "i:Instrumentos: [C] [F] [G] [E7(b9)] [Am7] [G] [F] [G] [F]",
+   "a:[C/E] [Dm7] [G/B] [C]"
+  ]
+ },
+ "209|413|i:Introdução: [D7M] [C#m7] [C#sus4] [C#/E#] [F#m] [D7M]": {
+  "old": [
+   "i:Introdução: [D7M] [C#m7] [C#sus4] [C#/E#] [F#m] [D7M]",
+   "a:[C#m7] [C#sus4] [C#/E#] [F#m] [Dm]"
+  ],
+  "new": [
+   "i:Introdução: [D7M] [C#m7] [C#sus4] [C#/E#] [F#m] [D7M]",
+   "a:[C#m7] [C#sus4] [C#/E#] [F#m] [Dm9]"
+  ]
+ },
+ "239|423|i:Introdução: [A] [D7M] [G] [D/F#] [A/E] [E] [A] [D7M] [G]": {
+  "old": [
+   "i:Introdução: [A] [D7M] [G] [D/F#] [A/E] [E] [A] [D7M] [G]"
+  ],
+  "new": [
+   "i:Introdução: [A] [D7M] [G] [D/F#] [A/E] [E] [A] [D7M] [G]",
+   "a:[D/F#] [E] [D9]"
+  ]
+ },
+ "61|23|i:Introdução: [C] [D#] [C] [D°] [G]": {
+  "old": [
+   "i:Introdução: [C] [D#] [C] [D°] [G]"
+  ],
+  "new": [
+   "i:Introdução: [C] [D°] [C] [D°] [G]"
+  ]
+ },
+ "118|44|i:Instrumentos: [Eb7M] [D] [Gm] [Gm/F] [Eb9] [C]": {
+  "old": [
+   "i:Instrumentos: [Eb7M] [D] [Gm] [Gm/F] [Eb9] [C]"
+  ],
+  "new": [
+   "i:Instrumentos: [Eb7M] [D] [Gm] [Gm/F] [Eø] [C]"
+  ]
+ },
+ "186|69|i:( [Gm]para repetir)": {
+  "old": [
+   "i:( [Gm]para repetir)"
+  ],
+  "new": [
+   "i:([Gm] [C7] para repetir)"
+  ]
+ },
+ "205|78|i:Instrumentos: [F] [C] [Dm] [Bb] [Gm] [A] [Bb] [A7] [Dm] [Am] [Bb] [A7] [Dm]": {
+  "old": [
+   "i:Instrumentos: [F] [C] [Dm] [Bb] [Gm] [A] [Bb] [A7] [Dm] [Am] [Bb] [A7] [Dm]"
+  ],
+  "new": [
+   "i:Instrumentos: [F] [C] [Dm] [Bb] [Gm] [A] [Bb] [A7] [Dm] [Am] [Bb] [A7] [Dm] [C]"
+  ]
+ },
+ "208|79|i:Instrumentos: [F] [Em] [Dm] [Em] [Am] [Bm] [D] [Db°]": {
+  "old": [
+   "i:Instrumentos: [F] [Em] [Dm] [Em] [Am] [Bm] [D] [Db°]"
+  ],
+  "new": [
+   "i:Instrumentos: [F] [Em] [Dm] [Em] [Am] [Bm] [D] [D#°]"
+  ]
+ },
+ "213|81|i:[Eb](. [Em]para repetir)": {
+  "old": [
+   "i:[Eb](. [Em]para repetir)"
+  ],
+  "new": [
+   "i:([Eb] [Em] para repetir)"
+  ]
+ },
+ "223|84|i:Instrumentos: [D] [A/C#] [Bm] [G9] [Dsus4] [B7]": {
+  "old": [
+   "i:Instrumentos: [D] [A/C#] [Bm] [G9] [Dsus4] [B7]"
+  ],
+  "new": [
+   "i:Instrumentos: [D] [A/C#] [Bm] [G9] [Bsus4] [B7]"
+  ]
+ },
+ "276|104|i:Instrumentos: [C] [A°] [G]": {
+  "old": [
+   "i:Instrumentos: [C] [A°] [G]"
+  ],
+  "new": [
+   "i:Instrumentos: [C] [Ab] [G]"
+  ]
+ },
+ "290|110|i:Introdução: [A] [E/G#] [D] [Bm] [E]": {
+  "old": [
+   "i:Introdução: [A] [E/G#] [D] [Bm] [E]"
+  ],
+  "new": [
+   "i:Introdução: [A] [E/G#] [D] [Bm] [E] (2x)"
+  ]
+ },
+ "333|128|i:Introdução: [D] [E] [C#m] [F#°] [Bm] [E] [A] [D/E]": {
+  "old": [
+   "i:Introdução: [D] [E] [C#m] [F#°] [Bm] [E] [A] [D/E]"
+  ],
+  "new": [
+   "i:Introdução: [D] [E] [C#m] [F#sus4] [F#/A#] [Bm] [E] [A] [D/E]"
+  ]
+ },
+ "383|146|i:Introdução: [D] [Bm] [G] [A]": {
+  "old": [
+   "i:Introdução: [D] [Bm] [G] [A]"
+  ],
+  "new": [
+   "i:Introdução: [D] [Bm] [G] [A] (2x)"
+  ]
+ },
+ "444|170|i:Instrumentos: [Gm] [Cm] [Eb9] [F] [F/G] [Gm]": {
+  "old": [
+   "i:Instrumentos: [Gm] [Cm] [Eb9] [F] [F/G] [Gm]"
+  ],
+  "new": [
+   "i:Instrumentos: [Gm] [Cm] [Eb9] [F] [F/G] [Gm] (2x)"
+  ]
+ },
+ "475|182|i:Introdução: [Cm] [Ab] [Fm] [G]": {
+  "old": [
+   "i:Introdução: [Cm] [Ab] [Fm] [G]"
+  ],
+  "new": [
+   "i:Introdução: [Cm] [Ab] [Fm] [G] (2x)"
+  ]
+ },
+ "495|191|i:Instrumentos: [Bm] [Am] [D]": {
+  "old": [
+   "i:Instrumentos: [Bm] [Am] [D]"
+  ],
+  "new": [
+   "i:Instrumentos: [Bm] [Am] [D]"
+  ]
+ },
+ "571|224|i:(| [B7]para repetir o hino)": {
+  "old": [
+   "i:(| [B7]para repetir o hino)"
+  ],
+  "new": [
+   "i:([B7] para repetir o hino)"
+  ]
+ },
+ "572|226|i:Instrumentos: [Am] [Am/D] [F] [C/E]": {
+  "old": [
+   "i:Instrumentos: [Am] [Am/D] [F] [C/E]"
+  ],
+  "new": [
+   "i:Instrumentos: [Am] [Am/G] [F] [C/E]"
+  ]
+ },
+ "584|230|i:Instrumentos: [Am] [F] [G] [C] [Am] [F] [G]": {
+  "old": [
+   "i:Instrumentos: [Am] [F] [G] [C] [Am] [F] [G]"
+  ],
+  "new": [
+   "i:Instrumentos: [Am] [F] [G] [C] [Am] [F] [G]"
+  ]
+ },
+ "591|233|i:Introdução: [E] [A9/E] [E]": {
+  "old": [
+   "i:Introdução: [E] [A9/E] [E]"
+  ],
+  "new": [
+   "i:Introdução: [E] [A9/E] [E] [A9/E]"
+  ]
+ },
+ "617|242|i:Instrumentos: [E] [G#m] [A] [F#m] [B]": {
+  "old": [
+   "i:Instrumentos: [E] [G#m] [A] [F#m] [B]"
+  ],
+  "new": [
+   "i:Instrumentos: [E] [G#m] [A] [F#m] [B] (2x)"
+  ]
+ },
+ "617|242|i:Instrumentos: [E] [G#m] [A] [F#m] [B] [E]": {
+  "old": [
+   "i:Instrumentos: [E] [G#m] [A] [F#m] [B] [E]"
+  ],
+  "new": [
+   "i:Instrumentos: [E] [G#m] [A] [F#m] [B] (2x)"
+  ]
+ },
+ "618|243|i:( [G/D][D]- no final)": {
+  "old": [
+   "i:( [G/D][D]- no final)"
+  ],
+  "new": [
+   "i:([G/D] [D] no final)"
+  ]
+ },
+ "622|244|i:Instrumentos: [C] [Am] [F] [Gsus4] [G]": {
+  "old": [
+   "i:Instrumentos: [C] [Am] [F] [Gsus4] [G]"
+  ],
+  "new": [
+   "i:Instrumentos: [C] [Am] [F] [Gsus4] [G] (2x)"
+  ]
+ },
+ "628|246|i:Introdução: [G] [Bm7] [C] [D]": {
+  "old": [
+   "i:Introdução: [G] [Bm7] [C] [D]"
+  ],
+  "new": [
+   "i:Introdução: [G] [Bm7] [C] [D] (2x)"
+  ]
+ },
+ "632|247|i:Introdução: [G9] [D/F#] [G9] [D/F#] [G] [D]": {
+  "old": [
+   "i:Introdução: [G9] [D/F#] [G9] [D/F#] [G] [D]"
+  ],
+  "new": [
+   "i:Introdução: [G9] [D/F#] [G9] [D/F#] [G] [D]"
+  ]
+ },
+ "637|249|i:Instrumentos: [Dm] [Gm] [C] [F]": {
+  "old": [
+   "i:Instrumentos: [Dm] [Gm] [C] [F]"
+  ],
+  "new": [
+   "i:Instrumentos: [Dm] [Gm] [C] [F] (na 1ª vez)"
+  ]
+ },
+ "643|251|i:Instrumentos: [G#m7] [A°] [E/G#] [F#m] [E/B] [B7] [E]": {
+  "old": [
+   "i:Instrumentos: [G#m7] [A°] [E/G#] [F#m] [E/B] [B7] [E]"
+  ],
+  "new": [
+   "i:Instrumentos: [G#m7] [A9] [E/G#] [F#m] [E/B] [B7] [E]"
+  ]
+ },
+ "650|254|i:Instrumentos: [A] [Bm] [E]": {
+  "old": [
+   "i:Instrumentos: [A] [Bm] [E]"
+  ],
+  "new": [
+   "i:Instrumentos: [A] [Bm] [E]"
+  ]
+ },
+ "652|255|i:Instrumentos: [Bm] [E] [C#m] [F#m] [Bm] [E] [D] [Dm] [A]": {
+  "old": [
+   "i:Instrumentos: [Bm] [E] [C#m] [F#m] [Bm] [E] [D] [Dm] [A]"
+  ],
+  "new": [
+   "i:Instrumentos: [A] [Bm] [E] [C#m] [F#m] [Bm] [E] [D] [Dm] [A]"
+  ]
+ },
+ "662|259|i:Instrumentos: [Am] [Dm] [G] [C] [Am] [Dm] [G]": {
+  "old": [
+   "i:Instrumentos: [Am] [Dm] [G] [C] [Am] [Dm] [G]"
+  ],
+  "new": [
+   "i:Instrumentos: [Am] [Dm] [G] [C] [Am] [Dm] [G]"
+  ]
+ },
+ "681|269|i:Introdução: [C] [Em7] [F] [G]": {
+  "old": [
+   "i:Introdução: [C] [Em7] [F] [G]"
+  ],
+  "new": [
+   "i:Introdução: [C] [Em7] [F] [G] (2x)"
+  ]
+ },
+ "683|270|i:Instrumentos: [F] [Em] [Dm] [C/G]": {
+  "old": [
+   "i:Instrumentos: [F] [Em] [Dm] [C/G]"
+  ],
+  "new": [
+   "i:Instrumentos: [F] [Em] [Dm] [C] [G]"
+  ]
+ },
+ "684|270|i:Instrumentos: [F#m] [C#m7] [D9]": {
+  "old": [
+   "i:Instrumentos: [F#m] [C#m7] [D9]"
+  ],
+  "new": [
+   "i:Instrumentos: [F#m] [C#m7] [D9]"
+  ]
+ },
+ "684|270|i:Instrumentos: [F#m] [C#m7] [D9] [A]": {
+  "old": [
+   "i:Instrumentos: [F#m] [C#m7] [D9] [A]"
+  ],
+  "new": [
+   "i:Instrumentos: [F#m] [C#m7] [D9]"
+  ]
+ },
+ "706|281|i:Introdução: [F] [C/E] [Bb/F] [F] [C/E] [Bb]": {
+  "old": [
+   "i:Introdução: [F] [C/E] [Bb/F] [F] [C/E] [Bb]"
+  ],
+  "new": [
+   "i:Introdução: [F] [C/F] [Bb/F] [F] [C/F] [Bb]"
+  ]
+ },
+ "708|283|i:Instrumentos: [Dm] [G/B] [G] [E] [G#ø] [A(sus4)]": {
+  "old": [
+   "i:Instrumentos: [Dm] [G/B] [G] [E] [G#ø] [A(sus4)]"
+  ],
+  "new": [
+   "i:Instrumentos: [Dm] [G/B] [G] [E] [G#°] [A(sus4)]"
+  ]
+ },
+ "709|283|i:Introdução: [Gm] [F] [E°] [Cm] [D] [Gm] [F] [E°] [Cm] [D] [Gm]": {
+  "old": [
+   "i:Introdução: [Gm] [F] [E°] [Cm] [D] [Gm] [F] [E°] [Cm] [D] [Gm]"
+  ],
+  "new": [
+   "i:Introdução: [Gm] [F] [Eb] [Cm] [D] [Gm] [F] [Eb] [Cm] [D] [Gm]"
+  ]
+ },
+ "709|283|i:Instrumentos: [Gm] [F] [E°] [D7]": {
+  "old": [
+   "i:Instrumentos: [Gm] [F] [E°] [D7]"
+  ],
+  "new": [
+   "i:Instrumentos: [Gm] [F] [Eb] [D7]"
+  ]
+ },
+ "710|284|i:Instrumentos: [F/C] [F] [G/F] [F/G] [G(sus2)]": {
+  "old": [
+   "i:Instrumentos: [F/C] [F] [G/F] [F/G] [G(sus2)]"
+  ],
+  "new": [
+   "i:Instrumentos: [F/C] [F] [G/F] [F/G] [G(sus2)]"
+  ]
+ },
+ "711|284|i:Instrumentos: [F] [C/E] [Am] [Dm] [F/G] [C] [Gm]": {
+  "old": [
+   "i:Instrumentos: [F] [C/E] [Am] [Dm] [F/G] [C] [Gm]"
+  ],
+  "new": [
+   "i:Instrumentos: [F] [C/E] [Am] [Dm] [F/G] [C] [Gm]"
+  ]
+ },
+ "765|306|i:( [Ab][G]“ para repetir)": {
+  "old": [
+   "i:( [Ab][G]“ para repetir)"
+  ],
+  "new": [
+   "i:([Ab] [G] para repetir)"
+  ]
+ },
+ "783|312|i:Introdução: [G] [G7] [C] [D2]": {
+  "old": [
+   "i:Introdução: [G] [G7] [C] [D2]"
+  ],
+  "new": [
+   "i:Introdução: [G] [G7] [C] [D]"
+  ]
+ },
+ "10|349|i:( [A/C#][B]para repetir)": {
+  "old": [
+   "i:( [A/C#][B]para repetir)"
+  ],
+  "new": [
+   "i:([A/C#] [B] para repetir)"
+  ]
+ },
+ "40|358|i:Instrumentos: [Bø] [C] [Am] [Dm] [Gm] [G] [C] [Bb] [C/E]": {
+  "old": [
+   "i:Instrumentos: [Bø] [C] [Am] [Dm] [Gm] [G] [C] [Bb] [C/E]"
+  ],
+  "new": [
+   "i:Instrumentos: [Bb] [C] [Am] [Dm] [Gm] [G] [C] [Bb] [C/E]"
+  ]
+ },
+ "49|360|i:Introdução: [C] [F] [C] [G]": {
+  "old": [
+   "i:Introdução: [C] [F] [C] [G]"
+  ],
+  "new": [
+   "i:Introdução: [C] [F] [C] [G] (2x)"
+  ]
+ },
+ "50|361|i:Introdução: [D] [E] [A] [G#°7] [Bm] [E7(9)]": {
+  "old": [
+   "i:Introdução: [D] [E] [A] [G#°7] [Bm] [E7(9)]"
+  ],
+  "new": [
+   "i:Introdução: [D] [E] [A] [G#°7] [Bm] [E7(9)]"
+  ]
+ },
+ "51|361|i:( [Dsus4][B]para repetir)": {
+  "old": [
+   "i:( [Dsus4][B]para repetir)"
+  ],
+  "new": [
+   "i:([Bsus4] [B] para repetir)"
+  ]
+ },
+ "62|364|i:( [Am][D][G]“ no final)": {
+  "old": [
+   "i:( [Am][D][G]“ no final)"
+  ],
+  "new": [
+   "i:([Am] [D] [G] no final)"
+  ]
+ },
+ "76|369|i:(no final [G][D])": {
+  "old": [
+   "i:(no final [G][D])"
+  ],
+  "new": [
+   "i:(no final [G] [D])"
+  ]
+ },
+ "91|374|i:Introdução: [C] [D/C] [Bm] [E] [Am] [G/B] [C] [D] [G] [C]": {
+  "old": [
+   "i:Introdução: [C] [D/C] [Bm] [E] [Am] [G/B] [C] [D] [G] [C]"
+  ],
+  "new": [
+   "i:Introdução: [C] [D/C] [Bm] [E] [Am] [G/B] [C] [D] [G] [C]"
+  ]
+ },
+ "96|376|i:( [C/G][G]na 2º vez) bis": {
+  "old": [
+   "i:( [C/G][G]na 2º vez) bis"
+  ],
+  "new": [
+   "i:([C/G] [G] na 2ª vez) (bis)"
+  ]
+ },
+ "125|384|i:Introdução: [B] [E] [B] [E] [A] [E] [Dsus4] [B7] [E]": {
+  "old": [
+   "i:Introdução: [B] [E] [B] [E] [A] [E] [Dsus4] [B7] [E]"
+  ],
+  "new": [
+   "i:Introdução: [B] [E] [B] [E] [A] [E] [Bsus4] [B7] [E]"
+  ]
+ },
+ "164|397|i:( [C7]para repetir)": {
+  "old": [
+   "i:( [C7]para repetir)"
+  ],
+  "new": [
+   "i:([C7] para repetir)"
+  ]
+ },
+ "167|398|i:Introdução: [G] [D] [A7] [D] [D7] [G] [D] [Bm7] [E/G#] [E/A]": {
+  "old": [
+   "i:Introdução: [G] [D] [A7] [D] [D7] [G] [D] [Bm7] [E/G#] [E/A]"
+  ],
+  "new": [
+   "i:Introdução: [G] [D] [A7] [D] [D7] [G] [D] [Bm7] [E/G#] [E] [A]"
+  ]
+ },
+ "181|404|i:[Gm][Cm][Gm](na 2º vez)": {
+  "old": [
+   "i:[Gm][Cm][Gm](na 2º vez)"
+  ],
+  "new": [
+   "i:([Gm] [Cm] [Gm] na 2ª vez)"
+  ]
+ },
+ "190|406|i:[Bm](na 2º vez)": {
+  "old": [
+   "i:[Bm](na 2º vez)"
+  ],
+  "new": [
+   "i:([Bm] na 2ª vez)"
+  ]
+ },
+ "210|413|i:Instrumentos: [Bm] [G/B] [D] [Bm] [D] [Em]": {
+  "old": [
+   "i:Instrumentos: [Bm] [G/B] [D] [Bm] [D] [Em]"
+  ],
+  "new": [
+   "i:Instrumentos: [Bm] [G/D] [D] [Bm] [D] [Em]"
+  ]
+ },
+ "211|414|i:Instrumentos: [E] [B/D#] [C#m7] [D] [A/C#] [A9]": {
+  "old": [
+   "i:Instrumentos: [E] [B/D#] [C#m7] [D] [A/C#] [A9]"
+  ],
+  "new": [
+   "i:Instrumentos: [E] [B/D#] [C#m7] [D] [A/C#] [A9]"
+  ]
+ },
+ "219|417|i:Instrumentos: [G/B] [Bm] [A] [D] [G/D] [Bm] [A]": {
+  "old": [
+   "i:Instrumentos: [G/B] [Bm] [A] [D] [G/D] [Bm] [A]"
+  ],
+  "new": [
+   "i:Instrumentos: [G/D] [Bm] [A] [D] [G/D] [Bm] [A]"
+  ]
+ },
+ "240|423|i:Introdução: [G9] [A7] [G] [A7] [G/A] [F] [E] [G] [E/G#]": {
+  "old": [
+   "i:Introdução: [G9] [A7] [G] [A7] [G/A] [F] [E] [G] [E/G#]"
+  ],
+  "new": [
+   "i:Introdução: [G9] [A2] [G] [A2] [G/A] [F] [E] [G] [E/G#]"
+  ]
+ },
+ "59|22|i:Final: [Bm] [Bm]": {
+  "old": [
+   "i:Final: [Bm] [Bm]",
+   "c:Sim, enche[Em]rá es[A]te lu[D]gar,",
+   "c:Sim, enche[Em]rá es[A]te lu[D]gar."
+  ],
+  "new": [
+   "h:Final",
+   "c:[Bm]Sim, enche[Em]rá es[A]te lu[D]gar,[Bm]",
+   "c:Sim, enche[Em]rá es[A]te lu[D]gar."
+  ]
+ },
+ "71|26|i:[G][F][C][G](| para repetir)": {
+  "old": [
+   "i:[G][F][C][G](| para repetir)",
+   "c:Para [Dm]sempre, vem me bus[C]car."
+  ],
+  "new": [
+   "c:Para [Dm]sempre, [G]vem me bus[C]car.[F][C]",
+   "i:([G] para repetir)"
+  ]
+ },
+ "83|30|i:Final: [A7]": {
+  "old": [
+   "i:Final: [A7]",
+   "c:[D]Para [D#°]te exal [A]tar [F#m]mos,",
+   "c:[Bm]Se[E]nhor Je[A]sus."
+  ],
+  "new": [
+   "h:Final",
+   "c:[A7] [D]Para [D#°]te exal[A]tar[F#m]mos,",
+   "c:[Bm]Se - [E]nhor Je[A]sus."
+  ]
+ },
+ "298|115|i:Final: [Bm]": {
+  "old": [
+   "i:Final: [Bm]",
+   "c:[D/A]Nada me se[Em]parará do a [A]por de [D]Deus."
+  ],
+  "new": [
+   "h:Final",
+   "c:[D/A]Nada [Bm]me se[Em]parará do a[A]mor de [D]Deus."
+  ]
+ },
+ "323|124|i:Final: [F#7(b13)] [E]": {
+  "old": [
+   "i:Final: [F#7(b13)] [E]",
+   "c:Somos [Bm]povo [A/C#]de Cristo Je[D]sus,",
+   "c:O Se[A9]nhor."
+  ],
+  "new": [
+   "h:Final",
+   "c:[F#7(#13)] Somos [Bm]povo [A/C#]de Cristo Je[D]sus,[E]",
+   "c:O Se[A9]nhor."
+  ]
+ },
+ "369|140|i:Final: [F#m]": {
+  "old": [
+   "i:Final: [F#m]",
+   "c:[D]Sou Jesus, a [E]tua solu[A]ção”."
+  ],
+  "new": [
+   "h:Final",
+   "c:[F#m] [D]“Sou Jesus, a [E]tua solu[A]ção”."
+  ]
+ },
+ "463|177|i:Final: [Am]": {
+  "old": [
+   "i:Final: [Am]",
+   "c:E [F]faze[Dm]-me repou[G]sar em ti, Se[C]nhor."
+  ],
+  "new": [
+   "h:Final",
+   "c:[Am]E [F]faze-[Dm]me repou[G]sar em ti, Se[C]nhor."
+  ]
+ },
+ "485|187|i:[C/G][G][C/G](. [G]no final)": {
+  "old": [
+   "i:[C/G][G][C/G](. [G]no final)",
+   "c:[Am]Vem! [D7]Ora vem Je[G]sus!"
+  ],
+  "new": [
+   "c:[Am]Vem! [D7]Ora vem Je[G]sus![C/G][G][C/G]",
+   "i:([G] no final)"
+  ]
+ },
+ "505|195|i:[Bm][Em][A7](. [D]no final)": {
+  "old": [
+   "i:[Bm][Em][A7](. [D]no final)",
+   "c:Seu [A7]nome é Je[D]sus!"
+  ],
+  "new": [
+   "c:Seu [A7]nome é Je[D]sus![Bm][Em][A7]",
+   "i:([D] no final)"
+  ]
+ },
+ "549|214|i:Final: [A]": {
+  "old": [
+   "i:Final: [A]",
+   "c:Maranata! Ora [Bm]vem, (Maranata! Ora [C#m]vem)"
+  ],
+  "new": [
+   "h:Final",
+   "c:[A] Maranata! Ora [Bm]vem, (Maranata! Ora [C#m]vem)"
+  ]
+ },
+ "710|284|i:Final: [G]": {
+  "old": [
+   "i:Final: [G]",
+   "c:To[G7]da [C]gratidão a [F/C]ti, Jesus,"
+  ],
+  "new": [
+   "h:Final",
+   "c:[G] To[G7]da [C]gratidão a [F/C]ti, Jesus,"
+  ]
+ },
+ "8|348|i:[C][D]( [G]— final)": {
+  "old": [
+   "i:[C][D]( [G]— final)",
+   "c:Ver [D]tido na [G].cruz!"
+  ],
+  "new": [
+   "c:Ver[D]tido na [G]cruz![C][D]",
+   "i:([G] no final)"
+  ]
+ },
+ "155|394|i:[G/B][Am]( [G]nofinal)": {
+  "old": [
+   "i:[G/B][Am]( [G]nofinal)",
+   "c:E por [C]sim Jerusa [D]em alcan[C]çar."
+  ],
+  "new": [
+   "c:E por [C]fim Jerusa[D]lém alcan[C]çar.[G/B][Am]",
+   "i:([G] no final)"
+  ]
+ },
+ "181|404|i:[G](na fºvez) |]": {
+  "old": [
+   "i:[G](na fºvez) |]",
+   "c:Teu coro [D]ao para Je[Gsus4]sus."
+  ],
+  "new": [
+   "c:Meu cora[D]ção para Je[Gsus4]sus.",
+   "i:([G] na 1ª vez)"
+  ]
+ },
+ "190|406|i:[A][D][G][D](na 1º vez)": {
+  "old": [
+   "i:[A][D][G][D](na 1º vez)",
+   "c:Eu vou com o Senhor."
+  ],
+  "new": [
+   "c:Eu [A]vou com o Se[D]nhor.[G][D] (na 1ª vez)"
+  ]
+ },
+ "645|252|a:[D]": {
+  "old": [
+   "a:[D]",
+   "i:[G](na 2º vez)"
+  ],
+  "new": [
+   "i:([D] [G] na 2ª vez)"
+  ]
+ },
+ "91|374|i:Instrumentos: [C] [D/C] [Bm] [E] [Am] [G/B] [C] [D]": {
+  "old": [
+   "i:Instrumentos: [C] [D/C] [Bm] [E] [Am] [G/B] [C] [D]"
+  ],
+  "new": [
+   "i:Instrumentos: [C] [D/C] [Bm] [E] [Am] [G/B] [C] [D]",
+   "a:[G] [C] [G]"
+  ]
+ },
+ "122|45|i:Instrumentos: [A] [F#m] [D] [Bm] [A]": {
+  "old": [
+   "i:Instrumentos: [A] [F#m] [D] [Bm] [A]"
+  ],
+  "new": [
+   "i:Instrumentos: [A] [F#m] [D] [Bm] [E] [A]"
+  ]
+ },
+ "181|67|i:Instrumentos: [D] [A] [E] [A]": {
+  "old": [
+   "i:Instrumentos: [D] [A] [E] [A]"
+  ],
+  "new": [
+   "i:Instrumentos: [D] [A] [E]"
+  ]
+ },
+ "198|74|i:Instrumentos: [A] [E] [Bm/F#] [E] [D] [D/C#] [Bm] [A/C#]": {
+  "old": [
+   "i:Instrumentos: [A] [E] [Bm/F#] [E] [D] [D/C#] [Bm] [A/C#]"
+  ],
+  "new": [
+   "i:Instrumentos: [A] [E] [Bm/F#] [E] [D] [D/C#] [Bm] [A/C#]",
+   "a:[D] [F] [E] [D] [E]"
+  ]
+ },
+ "628|246|i:Instrumentos: [G] [Bm7] [C] [D]": {
+  "old": [
+   "i:Instrumentos: [G] [Bm7] [C] [D]"
+  ],
+  "new": [
+   "i:Instrumentos: [G] [Bm7] [C] [D] (2x)"
+  ]
+ },
+ "681|269|i:Instrumentos: [C] [Em7] [F] [G]": {
+  "old": [
+   "i:Instrumentos: [C] [Em7] [F] [G]"
+  ],
+  "new": [
+   "i:Instrumentos: [C] [Em7] [F] [G] (2x)"
+  ]
+ },
+ "122|383|i:Instrumentos: [A] [G] [D/F#] [D/F#] [Em7] [D] [C6] [B7(b9)] [Em7]": {
+  "old": [
+   "i:Instrumentos: [A] [G] [D/F#] [D/F#] [Em7] [D] [C6] [B7(b9)] [Em7]",
+   "a:[G7M] [A6] [D]"
+  ],
+  "new": [
+   "i:Instrumentos: [A] [G] [D/F#] [Em7] [D] [C6] [B7(b9)] [Em7]",
+   "a:[D/F#] [G7M] [A6] [D]"
+  ]
+ }
+}

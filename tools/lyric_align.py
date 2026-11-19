@@ -199,7 +199,15 @@ if __name__ == "__main__":
     S = json.load(open("letras_slides.json"))
     songs = json.load(open(sys.argv[1]))
     st = collections.Counter()
+    IFIX = json.load(open("intro_fix.json")) if __import__("os").path.exists("intro_fix.json") else {}
     for s in songs:
+        for key, fx in IFIX.items():                       # introduções conferidas na imagem
+            num, page, first = key.split("|", 2)
+            if num != str(s["num"]) or page != str(s["page"]): continue
+            L = s["lines"]; old = fx["old"]
+            for p in range(len(L) - len(old) + 1):
+                if L[p:p + len(old)] == old:
+                    s["lines"] = L[:p] + fx["new"] + L[p + len(old):]; st["introdução corrigida"] += 1; break
         ref = pick_official(s, S)
         if not ref: st["sem letra oficial"] += 1; continue
         off = Official(ref["slides"])
