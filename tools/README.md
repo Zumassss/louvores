@@ -41,3 +41,6 @@ Louvores cuja partitura não tem acordes ganham uma "Cifra (sem acordes)" com a 
 4. `slot_cls.py`: confere a letra do acorde e o símbolo seguinte (#, b, m, 7, /) com exemplos reais do livro.
 5. `final_read.py` + `postfix.py`: leitura final; º/ø/6/9/2 depois de #/b pelos exemplos conferidos à mão (`seeds_sfx.json`).
 6. `apply_reads.py`: aplica no OCR das linhas e põe os acordes sem '|' sobre a palavra certa; `nivel2_assemble.py` monta as cifras.
+7. `propagate.py`: leituras incertas recebem a leitura de acordes de desenho idêntico já confirmados.
+8. `acordes_conferidos_nivel2.json`: 1.142 acordes incertos conferidos à mão na imagem (id do recorte -> acorde; vários acordes separados por espaço).
+9. `lyric_align.py`: corrige a letra com a letra oficial (slides), remove cabeçalhos/créditos que vazaram, põe cada acorde no começo da sílaba.
