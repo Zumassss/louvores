@@ -1176,8 +1176,13 @@
   } else pill();
 
   // ---------- Lista do culto ----------
-  var BYKEY = {};
-  DATA.forEach(function (d) { BYKEY[d.sk] = d; });
+  var BYKEY = {}, BYSID = {};
+  function sid(str) {   // id curto e estável de cada louvor (para o link)
+    var a = 5381, b = 52711;
+    for (var i = 0; i < str.length; i++) { var c = str.charCodeAt(i); a = (a * 33) ^ c; b = (b * 31 + c) | 0; }
+    return ((a >>> 0).toString(36) + (b >>> 0).toString(36)).slice(0, 7);
+  }
+  DATA.forEach(function (d) { BYKEY[d.sk] = d; d.sid = sid(d.sk); BYSID[d.sid] = d; });
   function today() {
     var d = new Date(), w = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][d.getDay()];
     return "Culto de " + w.toLowerCase() + ", " + d.getDate() + "/" + (d.getMonth() + 1);
@@ -1297,6 +1302,16 @@
     box.addEventListener("pointerup", end); box.addEventListener("pointercancel", end);
   })();
 
+  function copyText(t, msg) {
+    function fallback() {
+      var ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); toast(msg); } catch (e) { toast("Não foi possível copiar"); }
+      ta.remove();
+    }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(function () { toast(msg); }, fallback);
+    else fallback();
+  }
   function setSheet(html, onClick) {
     var bg = document.createElement("div"); bg.className = "sheet-bg";
     bg.innerHTML = '<div class="sheet" role="dialog">' + html + "</div>";
@@ -1334,17 +1349,58 @@
       if (e.target.getAttribute("data-a") === "new") { bg.remove(); renameSet(true); }
     });
   });
+  // ---------- Link da lista ----------
+  function shareLink() {
+    var s = curSet();
+    var items = s.items.map(function (k) { var d = BYKEY[k], t = tons[d.key] || 0; return d.sid + (t ? "~" + t : ""); });
+    return location.href.split("#")[0].split("?")[0] + "#lista=" + encodeURIComponent(s.name) + "&s=" + items.join(".");
+  }
+  function readLink() {
+    var m = /[#&]lista=([^&]*)&s=([^&]*)/.exec(location.hash);
+    if (!m) return null;
+    var name = decodeURIComponent(m[1]) || "Lista recebida", items = [], tones = {}, miss = 0;
+    m[2].split(".").forEach(function (x) {
+      var p = x.split("~"), d = BYSID[p[0]];
+      if (!d) { if (p[0]) miss++; return; }
+      items.push(d.sk); if (p[1]) tones[d.key] = +p[1];
+    });
+    return { name: name, items: items, tones: tones, miss: miss };
+  }
+  function receiveLink() {
+    var L = readLink(); if (!L) return;
+    history.replaceState(null, "", location.href.split("#")[0]);
+    if (!L.items.length) { toast("Link de lista inválido"); return; }
+    var same = setState.lists.filter(function (x) { return x.name === L.name && x.items.join() === L.items.join(); })[0];
+    var html = "<h2>" + esc(L.name) + "</h2><p>Lista compartilhada com " + L.items.length + (L.items.length === 1 ? " louvor" : " louvores") +
+      (L.miss ? " (" + L.miss + " não encontrado" + (L.miss > 1 ? "s" : "") + " nesta versão do site)" : "") + ".</p>" +
+      '<div class="dsetlist recv">' + L.items.map(function (k, i) {
+        var d = BYKEY[k], t = L.tones[d.key];
+        return "<button type=\"button\" tabindex=\"-1\"><i>" + (i + 1) + "</i><span>" + esc(d.t) + (t ? " · tom " + (t > 0 ? "+" : "") + t : "") + "</span></button>";
+      }).join("") + "</div>" +
+      '<div class="act"><button class="btn ghost" data-a="x">Agora não</button><button class="btn" data-a="ok">' + (same ? "Abrir lista" : "Salvar e abrir") + "</button></div>";
+    setSheet(html, function (e, bg) {
+      var a = e.target.getAttribute("data-a"); if (!a) return;
+      bg.remove(); if (a !== "ok") return;
+      if (same) setState.cur = same.id;
+      else { var id = "s" + Date.now(); setState.lists.unshift({ id: id, name: L.name, items: L.items, t: Date.now() }); setState.cur = id; }
+      Object.keys(L.tones).forEach(function (k) { if (tons[k] == null) tons[k] = L.tones[k]; });
+      save("lv.tons", tons); saveSets(); afterSetChange(); showTab("set");
+      toast(same ? "Lista aberta" : "Lista salva nas suas listas");
+    });
+  }
+  window.addEventListener("hashchange", receiveLink);
   function shareText() {
     var s = curSet();
     return s.name + "\n\n" + s.items.map(function (k, i) {
       var d = BYKEY[k], kl = keyLabel(d);
       return (i + 1) + ". " + (d.n ? d.n + " – " : "") + d.t + (kl ? " (tom " + kl + ")" : "");
-    }).join("\n");
+    }).join("\n") + "\n\nAbrir no app: " + shareLink();
   }
   $("setMore").addEventListener("click", function () {
     var I = function (p) { return '<svg viewBox="0 0 24 24">' + p + "</svg>"; };
     setSheet("<h2>" + esc(curSet().name) + '</h2><div class="menu-list">' +
-      '<button data-a="share">' + I('<path d="M12 15V4M8 8l4-4 4 4M5 12v7h14v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>') + "Compartilhar lista</button>" +
+      '<button data-a="share">' + I('<path d="M12 15V4M8 8l4-4 4 4M5 12v7h14v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>') + "Compartilhar link da lista</button>" +
+      '<button data-a="copy">' + I('<rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/>') + "Copiar link</button>" +
       '<button data-a="ren">' + I('<path d="M4 20h4L19 9l-4-4L4 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>') + "Renomear</button>" +
       '<button data-a="new">' + I('<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>') + "Nova lista</button>" +
       '<button data-a="clr" class="danger">' + I('<path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>') + "Esvaziar lista</button>" +
@@ -1354,11 +1410,13 @@
       if (!a) return;
       bg.remove();
       var s = curSet();
+      if (!s.items.length && (a === "share" || a === "copy")) { toast("A lista está vazia"); return; }
       if (a === "share") {
         var txt = shareText();
         if (navigator.share) navigator.share({ title: s.name, text: txt }).catch(function () {});
-        else if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast("Lista copiada"); });
+        else copyText(txt, "Lista e link copiados");
       }
+      if (a === "copy") copyText(shareLink(), "Link copiado");
       if (a === "ren") renameSet(false);
       if (a === "new") renameSet(true);
       if (a === "clr" && s.items.length) {
@@ -1496,6 +1554,7 @@
   WAIT.busca = [onBusca]; WAIT.conteudo = [onConteudo, function () { if (!$("tabSet").hidden) renderSet(); }];
   var idle = window.requestIdleCallback || function (f) { setTimeout(f, 300); };
   idle(function () { need("busca"); });
+  receiveLink();
   $("q").addEventListener("focus", function () { need("busca"); }, { once: true });
   setTimeout(function () { need("conteudo"); }, 900);
 })();
