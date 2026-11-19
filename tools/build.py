@@ -377,7 +377,7 @@ for s_ in data:
         if r > br: best, br = x, r
     if best is not None and br >= 0.92:
         s_["_news"] = [best]; _extra += 1
-json.dump([[s_["n"], s_["t"], x["src"], x["num"], x["title"]] for s_ in data for x in s_.get("_news", [])], open("coletaneas_ligacoes.json", "w"), ensure_ascii=False)
+json.dump([[s_["n"], s_["t"], x["src"], x["num"], x["title"]] for s_ in data for x in s_.get("_news", [])], open("matches.json", "w"), ensure_ascii=False)
 print("coletâneas novas:", len(NEWSRC), "cifras;", NEW_MATCH, "em louvores existentes;", NEW_NEW, "louvores novos;", _extra, "repetidos com a mesma cifra")
 
 # ---- cifras em texto (acordes + letra, com troca de tom no app) ----
@@ -519,20 +519,33 @@ for _k, _c in CIFRAS.items():
 print("cifras com acabamento:", _np)
 
 ver = hashlib.sha1(json.dumps([data, cad_out, RECORTES, CIFRAS], sort_keys=True).encode()).hexdigest()[:10]
+# dados divididos: lista (leve, carrega na hora), busca na letra e conteúdo (carregam depois)
+for d_ in data:
+    for k_ in [k_ for k_ in d_ if k_.startswith("_")]: del d_[k_]
+BUSCA = [d_.pop("x", "") for d_ in data]
+J = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
 with open(f"{OUT}/data.js", "w") as f:
-    f.write("window.LOUVORES=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
-    f.write("window.LETRAS=" + json.dumps(LETRAS, ensure_ascii=False, separators=(",", ":")) + ";\n")
-    f.write("window.CIFRAS=" + json.dumps(CIFRAS, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    f.write("window.LOUVORES=" + J(data) + ";\n")
     f.write("window.RECORTES=" + json.dumps(RECORTES, separators=(",", ":")) + ";\n")
-    f.write("window.CADERNOS=" + json.dumps(cad_out, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    f.write("window.CADERNOS=" + J([dict({k: v for k, v in c.items() if k != "p"}, n=len(c["p"])) for c in cad_out]) + ";\n")
     f.write("window.ARQUIVOS=" + json.dumps(sizes, separators=(",", ":")) + ";\n")
     f.write(f"window.DATA_VERSION={json.dumps(ver)};\n")
+with open(f"{OUT}/busca.js", "w") as f:
+    f.write("window.BUSCA=" + J(BUSCA) + ";\n")
+    f.write("window.BUSCA_CAD=" + J([c["p"] for c in cad_out]) + ";\n")
+    f.write("window.__lv&&__lv('busca');\n")
+with open(f"{OUT}/conteudo.js", "w") as f:
+    f.write("window.LETRAS=" + J(LETRAS) + ";\n")
+    f.write("window.CIFRAS=" + J(CIFRAS) + ";\n")
+    f.write("window.__lv&&__lv('conteudo');\n")
+for fn_ in ("data.js", "busca.js", "conteudo.js"):
+    print(fn_, round(os.path.getsize(f"{OUT}/{fn_}") / 1e6, 2), "MB")
 print("louvores", len(data), "novos de cadernos", added_new, "arquivos", len(keep), "MB", round(total / 1e6, 1), "versão", ver)
 print(collections.Counter(d["c"] for d in data))
 print(collections.Counter(d["k"] for d in data))
 
 # ---- service worker (lista de arquivos do app + versão) ----
-shell = ["./", "index.html", "style.css", "app.js", "data.js", "manifest.webmanifest", "lib/pdf.min.mjs", "lib/pdf.worker.min.mjs"]
+shell = ["./", "index.html", "style.css", "app.js", "data.js", "busca.js", "conteudo.js", "manifest.webmanifest", "lib/pdf.min.mjs", "lib/pdf.worker.min.mjs"]
 for sub in ["icons", "img", "fonts", "lib/standard_fonts"]:
     for fn in sorted(os.listdir(f"{OUT}/{sub}")):
         if not fn.endswith(".txt"): shell.append(f"{sub}/{fn}")

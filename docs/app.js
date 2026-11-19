@@ -3,7 +3,20 @@
   var DATA = window.LOUVORES || [];
   var CADS = window.CADERNOS || [];
   var FILES = window.ARQUIVOS || {};
-  var LETRAS = window.LETRAS || [];
+  var LETRAS = [];
+  var CIFRAS = {};
+  // carregamento sob demanda: busca na letra e conteúdo das cifras/letras
+  var LOADS = {}, WAIT = {};
+  window.__lv = function (name) { (WAIT[name] || []).forEach(function (f) { f(); }); WAIT[name] = null; LOADS[name] = true; };
+  function need(name, cb) {
+    if (LOADS[name] === true) { if (cb) cb(); return; }
+    if (cb) (WAIT[name] = WAIT[name] || []).push(cb);
+    if (LOADS[name]) return;
+    LOADS[name] = "loading";
+    var sc = document.createElement("script"); sc.src = name + ".js?v=" + (window.DATA_VERSION || ""); sc.async = true;
+    sc.onerror = function () { LOADS[name] = false; setTimeout(function () { need(name); }, 3000); };
+    document.head.appendChild(sc);
+  }
   var RECORTES = window.RECORTES || {};
   var $ = function (id) { return document.getElementById(id); };
 
@@ -41,14 +54,25 @@
     d.cs = d.c + (d.g ? " · " + d.g : "");
   });
   var PAGES = []; // páginas dos cadernos, buscáveis
-  CADS.forEach(function (c, ci) {
-    c.ci = ci;
-    c.p.forEach(function (txt, pi) {
-      var pg = { cad: c, page: pi + 1 };
-      prep(pg, c.t, txt);
-      PAGES.push(pg);
+  CADS.forEach(function (c, ci) { c.ci = ci; });
+  var searchReady = false;
+  function onBusca() {
+    var B = window.BUSCA || [], BC = window.BUSCA_CAD || [];
+    DATA.forEach(function (d, i) {
+      var nt = d.nt, ct = d.ct, tw = d.tw;
+      prep(d, d.t, B[i] || ""); d.nt = nt; d.ct = ct; d.tw = tw;
     });
-  });
+    CADS.forEach(function (c, ci) {
+      (BC[ci] || []).forEach(function (txt, pi) { var pg = { cad: c, page: pi + 1 }; prep(pg, c.t, txt); PAGES.push(pg); });
+    });
+    window.BUSCA = window.BUSCA_CAD = null;
+    searchReady = true;
+    if ($("q").value) run();
+  }
+  function onConteudo() {
+    LETRAS = window.LETRAS || []; CIFRAS = window.CIFRAS || {};
+    window.LETRAS = window.CIFRAS = null;
+  }
 
   // Distância de edição limitada (erros de digitação)
   function lev(a, b, max) {
@@ -215,7 +239,7 @@
     return '<li class="item" data-c="' + c.ci + '" data-p="' + (pg.page || 1) + '"><div class="badge cad">' + BOOK + "</div>" +
       '<div class="info"><div class="title">' + esc(c.t) + "</div>" +
       '<div class="line2"><span class="tag t-' + (c.k === "Cifra" ? "cifra" : c.k === "Letra" ? "letra" : "partitura") + '">' + esc(c.k) + "</span>" +
-      '<span class="col">' + (pg.page ? "Página " + pg.page + " de " + c.p.length : c.p.length + " páginas") + "</span></div>" +
+      '<span class="col">' + (pg.page ? "Página " + pg.page + " de " + c.n : c.n + " páginas") + "</span></div>" +
       (snip ? '<div class="snip">' + snip + "</div>" : "") + "</div></li>";
   }
 
@@ -224,16 +248,19 @@
   var CHUNK = 60;
   function paint(rows) {
     queue = rows; shown = 0;
-    $("list").innerHTML = "";
+    var L = $("list"); L.classList.remove("fresh"); void L.offsetWidth; L.classList.add("fresh");
+    L.innerHTML = "";
     more();
   }
   function more() {
     var html = "", end = Math.min(queue.length, shown + CHUNK);
     for (; shown < end; shown++) {
       var r = queue[shown];
+      var prev = queue[shown - 1], next = queue[shown + 1];
+      var g = (!prev || prev.sec ? " gf" : "") + (!next || next.sec ? " gl" : "");
       if (r.sec) html += '<li class="sec">' + esc(r.sec) + "</li>";
-      else if (r.pg) html += cadHTML(r.pg, r.snip ? snippet(r.pg, curToks) : "");
-      else html += itemHTML(r.d, r.why === "l" ? snippet(r.d, curToks) : "");
+      else if (r.pg) html += cadHTML(r.pg, r.snip ? snippet(r.pg, curToks) : "").replace('class="item"', 'class="item' + g + '"');
+      else html += itemHTML(r.d, r.why === "l" ? snippet(r.d, curToks) : "").replace('class="item"', 'class="item' + g + '"');
     }
     $("list").insertAdjacentHTML("beforeend", html);
   }
@@ -307,6 +334,9 @@
 
   var tmr;
   $("q").addEventListener("input", function () { clearTimeout(tmr); tmr = setTimeout(function () { run(); window.scrollTo(0, 0); }, 70); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "/" && $("viewer").hidden && document.activeElement !== $("q") && !document.querySelector(".sheet-bg")) { e.preventDefault(); if (curTab === "set") showTab("songs"); $("q").focus(); }
+  });
   $("q").addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
       e.preventDefault(); $("q").blur();
@@ -326,7 +356,6 @@
   });
 
   // ---------- Visualizador ----------
-  var CIFRAS = window.CIFRAS || {};
   var pdfjsP = null;
   function pdfjs() {
     if (!pdfjsP) pdfjsP = import("./lib/pdf.min.mjs").then(function (m) {
@@ -346,6 +375,7 @@
   var cropOn = load("lv.crop", true);
 
   function showViewer() {
+    if (closing) { closing = false; $("viewer").classList.remove("out"); }
     if ($("viewer").hidden) {
       $("viewer").hidden = false;
       document.documentElement.style.overflow = "hidden";
@@ -373,6 +403,12 @@
     stopScroll();
     var di = curDocs[idx];
     $("vSub").textContent = di[1].replace(/ · .*/, "");
+    if (/^(C:|L\d)/.test(di[0]) && LOADS.conteudo !== true) {
+      reset(); $("pages").innerHTML = '<div class="vmsg"><div class="spinner"></div>Carregando…</div>';
+      drawer(); dockUI();
+      need("conteudo", function () { if (cur === d && curIdx === idx) open(d, idx); });
+      return;
+    }
     if (/^C:/.test(di[0])) {
       var K = di[0].slice(2), base = CIFRAS[K];
       showCifra(base && edits[K] ? { k: base.k, l: edits[K], g: base.g, ed: 1 } : base, K);
@@ -392,6 +428,7 @@
   }
   function reset() {
     token++;
+    $("pages").classList.remove("txt");
     if (doc) { doc.destroy(); doc = null; docId = null; }
     if (observer) observer.disconnect();
     $("pageInd").hidden = true;
@@ -492,7 +529,10 @@
       stanza.push('<div class="cl has">' + out + "</div>");
     });
     flush();
+    $("pages").classList.add("txt");
     $("pages").innerHTML = '<article class="cifra' + (editing ? " editing" : "") + '" style="font-size:' + (17 * tzoom).toFixed(1) + 'px">' + html + "</article>";
+    var art = $("pages").firstChild;
+    if (art && window.innerWidth >= 1024 && window.innerWidth > window.innerHeight && art.scrollHeight > $("pages").clientHeight * 1.05) art.classList.add("cols");
     tomUI();
   }
   function setTom(shift) {
@@ -645,6 +685,7 @@
       $("editDone").addEventListener("click", function () { editing = false; editBar(); renderCifra(); });
     }
     b.hidden = !editing;
+    $("viewer").classList.toggle("editing", editing);
   }
   $("editBtn").addEventListener("click", function () {
     if (view !== "cifra" || !curCifra || !cifraKey) return;
@@ -717,6 +758,7 @@
         return ln.charAt(0) === "§" ? '<div class="lmark">' + esc(ln.slice(1)) + "</div>" : '<div class="ln">' + (esc(ln) || "&nbsp;") + "</div>";
       }).join("") + "</div>";
     });
+    $("pages").classList.add("txt");
     $("pages").innerHTML = '<article class="lyrics" style="font-size:' + (19 * tzoom).toFixed(1) + 'px">' + html + "</article>";
     $("pages").scrollTop = 0;
   }
@@ -786,7 +828,7 @@
     $("viewer").addEventListener("touchstart", function (e) {
       if (e.touches.length !== 1) { from = null; return; }
       sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-      from = $("drawer").classList.contains("open") ? "open" : (sx > window.innerWidth - 24 ? "edge" : (setPos >= 0 && !editing ? "mid" : null));
+      from = $("drawer").classList.contains("open") ? "open" : (setPos >= 0 && !editing ? "set" : (sx > window.innerWidth - 24 ? "edge" : null));
     }, { passive: true });
     $("viewer").addEventListener("touchend", function (e) {
       if (!from) return;
@@ -794,9 +836,9 @@
       if (Math.abs(dx) > 50 && Math.abs(dy) < 60) {
         if (from === "edge" && dx < 0) openDrawer();
         if (from === "open" && dx > 0) closeDrawer();
-        if (from === "mid" && Math.abs(dx) > 90 && Math.abs(dy) < 45) {
+        if (from === "set" && Math.abs(dx) > 60 && Math.abs(dy) < Math.abs(dx) * 0.6) {
           var pg = $("pages");
-          if (pg.scrollWidth <= pg.clientWidth + 4) { if (dx < 0) $("vNext").click(); else $("vPrev").click(); }
+          if (pg.scrollWidth <= pg.clientWidth + 4 || view !== "pdf") goSet(dx < 0 ? 1 : -1);
         }
       }
       from = null;
@@ -805,6 +847,17 @@
 
   function closeViewer() {
     closeDrawer(); stopScroll();
+    var v = $("viewer");
+    if (!window.matchMedia || !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      v.classList.add("out");
+      setTimeout(function () { v.classList.remove("out"); }, 190);
+    }
+    closing = true;
+    setTimeout(function () { if (closing) finishClose(); }, 170);
+  }
+  var closing = false;
+  function finishClose() {
+    closing = false;
     $("viewer").hidden = true; document.documentElement.style.overflow = "";
     reset(); view = ""; curCifra = null;
     $("pages").innerHTML = "";
@@ -818,6 +871,9 @@
   document.addEventListener("keydown", function (e) {
     if ($("viewer").hidden) return;
     if (e.key === "Escape") { if ($("drawer").classList.contains("open")) closeDrawer(); else history.back(); }
+    if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (setPos >= 0 && (e.key === "ArrowRight" || e.key === "PageDown" && e.shiftKey)) { e.preventDefault(); goSet(1); }
+    if (setPos >= 0 && e.key === "ArrowLeft") { e.preventDefault(); goSet(-1); }
   });
   $("vStar").addEventListener("click", function () {
     if (!cur) return;
@@ -1017,8 +1073,18 @@
 
   // ---------- Offline ----------
   var PDF_CACHE = "louvores-pdf-v1";
-  var allFiles = Object.keys(FILES);
-  var totalBytes = allFiles.reduce(function (a, k) { return a + FILES[k]; }, 0);
+  // Essencial (sempre salvo): partituras dos louvores que não têm cifra nem letra em texto + cadernos.
+  // O resto das partituras é salvo quando você abre, ou tudo de uma vez se escolher "Baixar todas".
+  var allPdf = load("lv.allpdf", false);
+  var essential = {};
+  DATA.forEach(function (d) {
+    if (!d.d.some(function (x) { return /^(C:|L\d)/.test(x[0]); })) d.d.forEach(function (x) { if (FILES[x[0]]) essential[x[0]] = 1; });
+  });
+  CADS.forEach(function (c) { if (FILES[c.id]) essential[c.id] = 1; });
+  function wanted() { return Object.keys(FILES).filter(function (k) { return allPdf || essential[k]; }); }
+  var allFiles = wanted();
+  function bytesOf(list) { return list.reduce(function (a, k) { return a + FILES[k]; }, 0); }
+  var totalBytes = bytesOf(Object.keys(FILES));
   var state = { done: 0, total: allFiles.length, running: false, error: false };
   var supported = "caches" in window && "serviceWorker" in navigator;
 
@@ -1032,7 +1098,7 @@
     else t.textContent = Math.floor(100 * state.done / state.total) + "% offline";
     var bar = document.querySelector(".sheet .bar > i"); if (bar) bar.style.width = (100 * state.done / state.total) + "%";
     var st = document.querySelector(".sheet .st");
-    if (st) st.textContent = state.done >= state.total ? "Tudo salvo. Pode usar sem internet." : state.done + " de " + state.total + " arquivos salvos no aparelho" + (state.error && !state.running ? " — conecte-se à internet para terminar." : "");
+    if (st) st.textContent = state.done >= state.total ? (allPdf ? "Tudo salvo, inclusive todas as partituras." : "Pronto. Cifras, letras e partituras essenciais salvas.") : state.done + " de " + state.total + " partituras salvas no aparelho" + (state.error && !state.running ? " — conecte-se à internet para terminar." : "");
   }
 
   function syncAll() {
@@ -1044,8 +1110,9 @@
         var have = {};
         keys.forEach(function (r) {
           var m = /pdf\/([^/?]+)\.pdf/.exec(r.url);
-          if (m && FILES[m[1]]) have[m[1]] = 1; else cache.delete(r); // remove arquivos antigos
+          if (m && FILES[m[1]]) have[m[1]] = 1; else if (!m || !FILES[m[1]]) cache.delete(r); // tira arquivos que saíram do site
         });
+        allFiles = wanted(); state.total = allFiles.length;
         var todo = allFiles.filter(function (id) { return !have[id]; });
         state.done = state.total - todo.length; pill();
         var idx = 0, fails = 0;
@@ -1058,7 +1125,7 @@
           }).then(function () { state.done++; if (state.done % 5 === 0 || state.done === state.total) pill(); }, function () { fails++; })
             .then(worker);
         }
-        return Promise.all([worker(), worker(), worker(), worker(), worker()]).then(function () { if (fails) state.error = true; });
+        return Promise.all([worker(), worker(), worker()]).then(function () { if (fails) state.error = true; });
       });
     }).catch(function () { state.error = true; })
       .then(function () { state.running = false; pill(); });
@@ -1075,13 +1142,19 @@
     var standalone = window.navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
     var bg = document.createElement("div"); bg.className = "sheet-bg";
     bg.innerHTML = '<div class="sheet" role="dialog" aria-label="Uso offline"><h2>Usar sem internet</h2>' +
-      "<p>" + DATA.length + " louvores e " + CADS.length + " cadernos (" + Math.round(totalBytes / 1e6) + " MB) ficam salvos no aparelho. Depois disso tudo funciona sem internet.</p>" +
+      "<p>Todas as cifras e letras (" + DATA.length + " louvores) já ficam salvas no aparelho e funcionam sem internet. As partituras são salvas quando você abre cada uma.</p>" +
       '<div class="bar"><i></i></div><p class="st"></p>' +
+      '<label class="dsw sw-all"><span>Baixar todas as partituras<small>' + Math.round(totalBytes / 1e6) + ' MB · para usar qualquer partitura sem internet</small></span><input type="checkbox" id="allPdf"' + (allPdf ? " checked" : "") + "><i></i></label>" +
       (standalone ? "" : '<div class="howto"><b>No iPhone (Safari):</b> toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b> e abra sempre pelo ícone. Assim o iPhone não apaga os arquivos salvos.</div>') +
       '<div class="opts" role="group" aria-label="Tema">' +
       ["auto", "light", "dark"].map(function (t) { return '<button type="button" data-t="' + t + '" aria-pressed="' + (theme === t) + '">' + { auto: "Automático", light: "Claro", dark: "Escuro" }[t] + "</button>"; }).join("") + "</div>" +
       '<div class="act"><button class="btn ghost" data-a="x">Fechar</button><button class="btn" data-a="go">' + (state.done >= state.total ? "Verificar de novo" : "Salvar agora") + "</button></div></div>";
     document.body.appendChild(bg);
+    bg.querySelector("#allPdf").addEventListener("change", function () {
+      allPdf = this.checked; save("lv.allpdf", allPdf);
+      allFiles = wanted(); state.total = allFiles.length; state.done = 0;
+      if (allPdf) syncAll(); else { pill(); syncAll(); }
+    });
     bg.addEventListener("click", function (e) {
       var a = e.target.getAttribute("data-a"), t = e.target.getAttribute("data-t");
       if (e.target === bg || a === "x") bg.remove();
@@ -1330,7 +1403,10 @@
     var s = curSet(), nav = setPos >= 0 && cur && s.items[setPos] === cur.sk;
     if (!nav && cur && setPos >= 0) setPos = s.items.indexOf(cur.sk);
     nav = setPos >= 0 && cur;
-    $("vNav").hidden = !nav;
+    $("viewer").classList.toggle("inset", !!nav);
+    $("vNav").hidden = true;
+    if (nav) $("vSub").textContent = $("vSub").textContent.replace(/ · \d+ de \d+$/, "") + " · " + (setPos + 1) + " de " + s.items.length;
+    drawerSet();
     if (nav) {
       var p = BYKEY[s.items[setPos - 1]], n = BYKEY[s.items[setPos + 1]];
       $("vPrev").disabled = !p; $("vNext").disabled = !n;
@@ -1346,8 +1422,40 @@
       : '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
     $("qRoll").classList.toggle("on", rolling);
   }
+  function drawerSet() {
+    var s = curSet(), on = setPos >= 0 && cur;
+    $("secSet").hidden = !on; $("secAdd").hidden = !!on || !cur;
+    if (!on) return;
+    $("dSetPos").textContent = (setPos + 1) + " de " + s.items.length;
+    $("dPrev").disabled = setPos <= 0; $("dNext").disabled = setPos >= s.items.length - 1;
+    $("dSetList").innerHTML = s.items.map(function (k, i) {
+      var d = BYKEY[k];
+      return '<button type="button" data-go="' + i + '" class="' + (i === setPos ? "on" : "") + '"><i>' + (i + 1) + "</i><span>" + esc(d.t) + "</span></button>";
+    }).join("");
+  }
+  $("dPrev").addEventListener("click", function () { goSet(-1); closeDrawer(); });
+  $("dNext").addEventListener("click", function () { goSet(1); closeDrawer(); });
+  $("dSetList").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-go]"); if (!b) return;
+    var i = +b.getAttribute("data-go"); closeDrawer();
+    if (i !== setPos) { var dir = i > setPos ? 1 : -1; openFromSet(i); slide(dir); }
+  });
+  var tipT;
+  function slide(dir) {
+    var pg = $("pages"); pg.classList.remove("slide-l", "slide-r"); void pg.offsetWidth; pg.classList.add(dir > 0 ? "slide-l" : "slide-r");
+    var t = $("swipeTip");
+    if (!t) { t = document.createElement("div"); t.id = "swipeTip"; t.className = "swipe-tip"; $("viewer").appendChild(t); }
+    t.textContent = (setPos + 1) + " de " + curSet().items.length + " · " + cur.t;
+    t.hidden = false; clearTimeout(tipT); tipT = setTimeout(function () { t.hidden = true; }, 1300);
+  }
+  function goSet(dir) {
+    var n = setPos + dir, s = curSet();
+    if (setPos < 0) return;
+    if (n < 0 || n >= s.items.length) { toast(n < 0 ? "Este é o primeiro louvor da lista" : "Fim da lista"); return; }
+    openFromSet(n); slide(dir);
+  }
   function drawerAdd() {
-    if (!cur) { $("dAdd").parentNode.hidden = true; return; }
+    if (!cur || setPos >= 0) { $("dAdd").parentNode.hidden = true; return; }
     $("dAdd").parentNode.hidden = false;
     var on = inSet(cur);
     $("dAdd").textContent = on ? "✓ Na lista do culto — tirar" : "＋ Adicionar à lista do culto";
@@ -1385,4 +1493,9 @@
   renderChips();
   run();
   afterSetChange();
+  WAIT.busca = [onBusca]; WAIT.conteudo = [onConteudo, function () { if (!$("tabSet").hidden) renderSet(); }];
+  var idle = window.requestIdleCallback || function (f) { setTimeout(f, 300); };
+  idle(function () { need("busca"); });
+  $("q").addEventListener("focus", function () { need("busca"); }, { once: true });
+  setTimeout(function () { need("conteudo"); }, 900);
 })();

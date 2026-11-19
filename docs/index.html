@@ -34,7 +34,7 @@
     <div class="search-wrap">
       <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Número, título ou trecho da letra" aria-label="Buscar louvor">
-      <button id="clear" class="clear" type="button" aria-label="Limpar busca" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+      <button id="clear" class="clear" type="button" aria-label="Limpar busca" hidden><i><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></i></button>
     </div>
     <div class="chips" id="chips" role="tablist" aria-label="Filtros"></div>
   </div>
@@ -120,7 +120,13 @@
       <div class="dtitle" id="dTitle"></div>
       <div class="dcol" id="dCol"></div>
     </div>
-    <div class="dsec dbtns">
+    <div class="dsec" id="secSet" hidden>
+      <div class="dlab">Lista do culto <span id="dSetPos" class="dhint"></span></div>
+      <div class="drow setnav"><button id="dPrev" class="dstep wide" type="button">‹ Anterior</button><button id="dNext" class="dstep wide" type="button">Próximo ›</button></div>
+      <div id="dSetList" class="dsetlist"></div>
+      <div class="dtip">Dica: arraste a cifra para o lado para trocar de louvor.</div>
+    </div>
+    <div class="dsec dbtns" id="secAdd">
       <button id="dAdd" class="dbtn primary" type="button"></button>
     </div>
     <div class="dsec" id="secDocs"><div class="dlab">Ver</div><div id="dDocs" class="dlist" role="tablist"></div></div>
