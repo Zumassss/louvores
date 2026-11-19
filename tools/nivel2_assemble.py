@@ -24,6 +24,9 @@ def load_rows(paths):
             line = line.strip()
             if line: pages.append(json.loads(line))
     pages.sort(key=lambda r: r["page"])
+    # capas, sugestões, índices e lista de autores: não são louvores
+    SKIP = set(range(316, 346)) | set(range(425, 451))
+    pages = [p for p in pages if p["page"] not in SKIP]
     items = []
     for pg in pages:
         H = pg.get("H", 3500)
@@ -164,6 +167,14 @@ def assemble(items):
         if it["words"] and (re.fullmatch(r"\d{1,3}", txt) or (it["y"] < it["H"] * 0.035 and len(txt.split()) <= 3 and not HEAD.match(txt))):
             continue
         m = HEAD.match(txt) if it["words"] and not it["chords"] else None
+        if not m and cur is not None and it["words"]:
+            # título com OCR em minúsculas ("115 - Graça Do, Ó Senhor"): aceita se for o número seguinte
+            m2 = re.match(r"^\s*(\d{1,3})\s*[-–—]+\s*(\S.{2,})$", txt)
+            if m2 and cur["num"].isdigit() and int(m2.group(1)) == int(cur["num"]) + 1:
+                class _M:
+                    def __init__(s, a, b): s.g = (None, a, b)
+                    def group(s, k): return s.g[k]
+                m = _M(m2.group(1), re.sub(r"\s+[a-z]\s+", " ", m2.group(2)).upper())
         if m:
             cur = {"num": m.group(1), "title": m.group(2).strip(" -–"), "page": it["page"], "lines": [], "head": [], "cont": True}
             songs.append(cur); continue
@@ -326,6 +337,13 @@ letra_orig_forms = {}
 if __name__ == "__main__":
     items = load_rows(sys.argv[2:])
     songs = assemble(items)
+    # número lido errado (400 no lugar de 100): os vizinhos dizem qual é
+    for sec in ([s for s in songs if s["page"] < 345], [s for s in songs if s["page"] >= 345]):
+        for k in range(1, len(sec) - 1):
+            a, b, c = sec[k - 1]["num"], sec[k]["num"], sec[k + 1]["num"]
+            if a.isdigit() and c.isdigit() and int(c) - int(a) == 2 and (not b.isdigit() or int(b) != int(a) + 1):
+                print("número corrigido:", b, "->", int(a) + 1, sec[k]["title"])
+                sec[k]["num"] = str(int(a) + 1)
     slides = json.load(open("letras_slides.json"))
     by_num = {int(x["num"]): x for x in slides["col"] if x["num"]}
     gv = set()

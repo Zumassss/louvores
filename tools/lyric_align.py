@@ -114,14 +114,48 @@ def align_line(line, off):
         newch.append((np_, ch))
     return line[:2] + build(new, newch), True
 
+_POOL = None
+def _pool(S):
+    """todas as letras oficiais: slides (todas as listas) + letras oficiais do site"""
+    global _POOL
+    if _POOL is None:
+        _POOL = []
+        for L in ("col", "cias", "av", "avcias"):
+            for x in S[L]: _POOL.append(x)
+        try:
+            L0 = open("/home/user/louvores/docs/data.js").read().split("\n")
+            LET = json.loads(L0[1][L0[1].index("=") + 1:-1])
+            for t in LET:
+                ls = [ln for ln in re.sub(r"§.*", "", t).split("\n") if ln.strip()]
+                if ls: _POOL.append({"num": "", "title": ls[0], "slides": [ls]})
+        except Exception: pass
+        for x in _POOL:
+            x["_w"] = set(w for w in (letters(w)[0] for w in " ".join(" ".join(sl) for sl in x["slides"]).split()) if len(w) > 3)
+    return _POOL
+
+def pick_by_text(song, S):
+    sw = set(w for w in (letters(w)[0] for l in song["lines"] if l[:2] in ("c:", "t:") for w in parse(l[2:])[0].split()) if len(w) > 3)
+    if len(sw) < 5: return None
+    best, br = None, 0
+    for x in _pool(S):
+        if not x["_w"]: continue
+        r = len(sw & x["_w"]) / len(sw)
+        if r > br: best, br = x, r
+    return best if br >= 0.6 else None
+
 def pick_official(song, S):
+    r = _pick_official(song, S)
+    return r or pick_by_text(song, S)
+
+def _pick_official(song, S):
     def k(t): return letters(t)[0]
     lst = S["cias"] if song["page"] >= 345 else S["col"]
     num = int(song["num"]) if str(song["num"]).isdigit() else None
     cand = [x for x in lst if x["num"] and num is not None and int(x["num"]) == num]
     tt = k(song["title"])
     for x in cand:
-        if difflib.SequenceMatcher(None, tt, k(x["title"])).ratio() >= 0.55 or k(x["title"]).startswith(tt[:12]): return x
+        kt = k(x["title"])
+        if difflib.SequenceMatcher(None, tt, kt).ratio() >= 0.55 or kt.startswith(tt[:12]) or (len(kt) >= 5 and tt.startswith(kt)): return x
     # pelo título em todas as listas
     best, br = None, 0
     for L in ("col", "cias", "av", "avcias"):
@@ -140,7 +174,10 @@ def lixo(line):
     t = line[2:].strip()
     n = letters(t)[0]
     if len(n) <= 3 and not re.match(r"(?i)^(bis|ó|oh|ah|ai|amém)$", t): return True
-    if n in ("maran", "anata", "ata", "ino", "ibis", "maranata"): return True
+    if n in ("maran", "anata", "ata", "ino", "ibis", "aranata", "nata", "osenh", "orjesusvem", "osenhorj", "osenhorje", "susver", "susem", "mnosam", "valseado", "biis"): return True
+    if n in ("maranata", "osenhor", "jesusvem") and sum(ch.isupper() for ch in t) >= 0.7 * sum(ch.isalpha() for ch in t): return True   # logotipo do livro
+    if re.match(r"(?i)^\s*\d{3,5}\s*\(?\s*let", t) or re.search(r"\b[A-Z]{2,3}[:.][A-Z.]{2,}", t) and len(t) < 30: return True
+    if re.match(r"(?i)^(crian[cç]as e adolescentes|santifica[cç][aã]o e derramam)", t): return True
     if re.search(r"\b(Trad|Adap|Let|M[uú]s|Arr|Harm)\.", t) or re.fullmatch(r"[^a-z]*[A-Z]\.[^a-z]*\)\s*", t): return True   # créditos
     parts = [p for p in re.split(r"\s+[—–-]\s+", t) if p]
     return all(any(difflib.SequenceMatcher(None, letters(p)[0], sx).ratio() >= 0.85 for sx in _SEC) for p in parts)
@@ -199,6 +236,8 @@ if __name__ == "__main__":
     S = json.load(open("letras_slides.json"))
     songs = json.load(open(sys.argv[1]))
     st = collections.Counter()
+    LFIX = json.load(open("line_fix.json")) if __import__("os").path.exists("line_fix.json") else {}
+    SFIX = json.load(open("song_fix.json")) if __import__("os").path.exists("song_fix.json") else {}
     IFIX = json.load(open("intro_fix.json")) if __import__("os").path.exists("intro_fix.json") else {}
     for s in songs:
         for key, fx in IFIX.items():                       # introduções conferidas na imagem
@@ -208,6 +247,8 @@ if __name__ == "__main__":
             for p in range(len(L) - len(old) + 1):
                 if L[p:p + len(old)] == old:
                     s["lines"] = L[:p] + fx["new"] + L[p + len(old):]; st["introdução corrigida"] += 1; break
+        k_ = f"{s['num']}|{s['page']}"
+        if k_ in SFIX: s["lines"] = SFIX[k_]; st["música conferida à mão"] += 1; continue
         ref = pick_official(s, S)
         if not ref: st["sem letra oficial"] += 1; continue
         off = Official(ref["slides"])
@@ -215,7 +256,8 @@ if __name__ == "__main__":
         out = []
         for l in s["lines"]:
             if l.startswith(("c:", "t:")) and lixo(l): st["lixo removido"] += 1; continue
-            if re.match(r"(?i)^[ct]:\s*cantar o coro", l): out.append("h:" + l[2:].strip()); continue
+            if re.match(r"(?i)^[ct]:\s*(cantar|cantam|canta o coro|voltar|repetir|obs:|final\s*[:;]?\s*$|\(?\s*na \d|invertendo as vozes|as vozes\.)", l) and "[" not in l:
+                out.append("h:" + l[2:].strip().replace("º", "ª").rstrip(";")); st["instrução como título"] += 1; continue
             if l.startswith("c:") or (l.startswith("t:") and len(l) > 10):
                 nl, ok = align_line(l, off)
                 if not ok: nl, ok = split_align(l, off)
@@ -224,5 +266,10 @@ if __name__ == "__main__":
                 out.append(nl)
             else: out.append(l)
         s["lines"] = [snap_syllables(l) for l in restore_split(out)]
+        for o_, n_ in LFIX.get(f"{s['num']}|{s['page']}", []):
+            if o_ in s["lines"]:
+                p_ = s["lines"].index(o_); s["lines"][p_:p_ + 1] = n_; st["verso conferido à mão"] += 1
+            else: st["conferido não aplicado"] += 1
+
     json.dump(songs, open(sys.argv[2] if len(sys.argv) > 2 else sys.argv[1], "w"), ensure_ascii=False, indent=1)
     print(dict(st))
